@@ -2,6 +2,10 @@ import unittest
 
 
 class TestCaptureGroups(unittest.TestCase):
+    # TODO: maybe non-capturing groups should also be included
+    #  the set of all capture groups? then you would be able
+    #  to refer to them by their name/index.
+
     def test_simple(self) -> None:
         pass
 
@@ -30,5 +34,9 @@ class TestCaptureGroups(unittest.TestCase):
         pass
 
     def test_negative_look_ahead(self) -> None:
+        # TODO: find out if you want that
+        pass
+
+    def test_back_reference(self) -> None:
         # TODO: find out if you want that
         pass
