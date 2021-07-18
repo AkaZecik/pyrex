@@ -4,8 +4,9 @@ from rex import Regex
 
 
 class TestInstanceOperators(unittest.TestCase):
-    def test_not(self) -> None:
+    def test_complement(self) -> None:
         regex = Regex("TODO")
+        regex.complement()
 
     def test_getitem(self) -> None:
         regex = Regex("(?hello)(world)(?Plorem:ipsum)")

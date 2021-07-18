@@ -57,6 +57,7 @@ class TestSpecialCharacters(unittest.TestCase):
 
     def test_entire_language(self) -> None:
         # \@
+        # over entire alphabet
         pass
 
     def test_empty_language(self) -> None:
