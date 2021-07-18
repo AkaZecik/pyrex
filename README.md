@@ -4,4 +4,4 @@
 
 ### Python
 
-Project is written for Python 3.9
+Project is written in Python 3.9
