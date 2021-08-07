@@ -52,4 +52,13 @@ class TestStringOperators(unittest.TestCase):
         pass
 
     def test_optional(self) -> None:
+        # ?
+        pass
+
+    def test_case_insensitive(self) -> None:
+        # ~
+        pass
+
+    def test_repeats(self) -> None:
+        # %
         pass
