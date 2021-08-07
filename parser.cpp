@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <stack>
+#include <utility>
 #include <vector>
 
 
@@ -24,7 +25,7 @@ enum class NodeKind {
     ALTERNATE,
     COMPLEMENT,
     OPTIONAL,
-    NOT_GREEDY,
+    NOT_GREEDY,  /* does it make sense in DFA implementation? */
     CASE_INSENSITIVE,
     NUMBERED_CAPTURE_GROUP,
     NAMED_CAPTURE_GROUP,
@@ -38,80 +39,132 @@ struct Node {
 
 struct CharNode : Node {
     char value;
+
     explicit CharNode(char value) : value(value) {}
 };
 
+struct RangeNode : Node {
+    char begin;
+    char end;
+
+    RangeNode(char begin, char end) : begin(begin), end(end) {}
+};
+
 struct EscapeCharNode : Node {
+    /* SpecialCharNode ? */
     char value;
+
     explicit EscapeCharNode(char value) : value(value) {}
 };
 
 struct CharsetNode : Node {
-
+    std::vector<Node> sets;
 };
 
-struct ConcatNode : Node {
+struct UnaryOperatorNode : Node {
+    Node *operand;
 
+    explicit UnaryOperatorNode(Node *operand) : operand(operand) {}
 };
 
-struct UnionNode : Node {
+struct BinaryOperatorNode : Node {
+    Node *left_operand;
+    Node *right_operand;
 
+    BinaryOperatorNode(Node *left_operand, Node *right_operand) : left_operand(left_operand),
+                                                                  right_operand(right_operand) {}
 };
 
-struct IntersectNode : Node {
-
+struct ConcatNode : BinaryOperatorNode {
+    using BinaryOperatorNode::BinaryOperatorNode;
 };
 
-struct MinusNode : Node {
-
+struct UnionNode : BinaryOperatorNode {
+    using BinaryOperatorNode::BinaryOperatorNode;
 };
 
-struct XorNode : Node {
-
+struct IntersectNode : BinaryOperatorNode {
+    using BinaryOperatorNode::BinaryOperatorNode;
 };
 
-struct StarNode : Node {
-
+struct MinusNode : BinaryOperatorNode {
+    using BinaryOperatorNode::BinaryOperatorNode;
 };
 
-struct PlusNode : Node {
-
+struct XorNode : BinaryOperatorNode {
+    using BinaryOperatorNode::BinaryOperatorNode;
 };
 
-struct RepeatNode : Node {
-
+struct StarNode : UnaryOperatorNode {
+    using UnaryOperatorNode::UnaryOperatorNode;
 };
 
-struct AlternateNode : Node {
-
+struct PlusNode : UnaryOperatorNode {
+    using UnaryOperatorNode::UnaryOperatorNode;
 };
 
-struct ComplementNode : Node {
+struct RepeatNode : UnaryOperatorNode {
+    long long min;
+    long long max;
 
+    RepeatNode(Node *operand, long long min, long long max) : UnaryOperatorNode(operand), min(min), max(max) {
+        // assert 0 <= min <= max
+    }
 };
 
-struct OptionalNode : Node {
-
+struct AlternateNode : BinaryOperatorNode {
+    using BinaryOperatorNode::BinaryOperatorNode;
 };
 
-struct NotGreedyNode : Node {
-
+struct ComplementNode : UnaryOperatorNode {
+    using UnaryOperatorNode::UnaryOperatorNode;
 };
 
-struct CaseInsensitiveNode : Node {
-
+struct OptionalNode : UnaryOperatorNode {
+    using UnaryOperatorNode::UnaryOperatorNode;
 };
 
-struct NumberedCapturingGroupNode : Node {
-
+struct NotGreedyNode : UnaryOperatorNode {
+    using UnaryOperatorNode::UnaryOperatorNode;
+    /* does it make sense in DFA implementation?
+     * can we somehow emulate it? */
 };
 
-struct NamedCapturingGroupNode : Node {
-
+struct CaseInsensitiveNode : UnaryOperatorNode {
+    using UnaryOperatorNode::UnaryOperatorNode;
 };
 
-struct NonCapturingGroupNode : Node {
+struct GroupNode : UnaryOperatorNode {
+    using UnaryOperatorNode::UnaryOperatorNode;
+};
 
+struct NumberedCapturingGroupNode : GroupNode {
+    long long number;
+
+    explicit NumberedCapturingGroupNode(Node *operand, long long number) : GroupNode(operand), number(number) {}
+};
+
+struct NamedCapturingGroupNode : GroupNode {
+    std::string name;
+
+    NamedCapturingGroupNode(Node *operand, std::string name) : GroupNode(operand), name(std::move(name)) {}
+};
+
+struct NonCapturingGroupNode : GroupNode {
+    using GroupNode::GroupNode;
+};
+
+
+struct Regex {
+    Node *regex;
+
+    explicit Regex(std::string const &regex) {
+        this->regex = parse(regex);
+    }
+
+    static Node *parse(std::string const &regex) {
+        return nullptr;
+    }
 };
 
 
@@ -123,7 +176,8 @@ int parse(std::string const &regex) {
     for (int i = 0; i < regex.size();) {
         if (in_char_set) {
             switch (regex[i]) {
-                case '(': break;
+                case '(':
+                    break;
             }
         } else {
 
