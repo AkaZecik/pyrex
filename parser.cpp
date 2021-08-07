@@ -8,64 +8,11 @@
 #include <stack>
 #include <vector>
 
-struct node {
-    int hello;
-};
-
-struct op : node {
-    std::string kind;
-    node *children[];
-};
-
-struct leaf {
-
-};
-
-class Parser {
-    std::string const &regex;
-
-    explicit Parser(std::string &regex) : regex(regex) {}
-
-
-};
-
-
-enum class TokenKind {
-    CHAR,
-    ESCAPE_CHAR,
-    CHARSET_OPEN,
-    CHARSET_CLOSE,
-    PARENS_OPEN,
-    PARENS_CLOSE,
-    NCG,
-    CG_NAME,
-};
-
-struct TokenValue {};
-
-struct Token {
-    TokenKind kind;
-    std::string value; // co z errorami, tj. informacja, ktory znak jest "zly"?
-};
-
-
-struct RegexTokenizer {
-    unsigned long long counter = 0;
-    std::string const &regex;
-
-    explicit RegexTokenizer(std::string const &regex) : regex(regex) {}
-
-    Token getNextToken() {
-        counter += 1;
-        return {};
-    }
-};
-
 
 enum class NodeKind {
     CHAR,
+    ESCAPE,
     CHARSET,
-    PARENS,
     CONCAT,
     UNION,
     INTERSECT,
@@ -77,74 +24,119 @@ enum class NodeKind {
     ALTERNATE,
     COMPLEMENT,
     OPTIONAL,
+    NOT_GREEDY,
     CASE_INSENSITIVE,
+    NUMBERED_CAPTURE_GROUP,
+    NAMED_CAPTURE_GROUP,
+    NON_CAPTURING_GROUP,
 };
 
 
 struct Node {
+    virtual void sth() = 0;
+};
+
+struct CharNode : Node {
+    char value;
+    explicit CharNode(char value) : value(value) {}
+};
+
+struct EscapeCharNode : Node {
+    char value;
+    explicit EscapeCharNode(char value) : value(value) {}
+};
+
+struct CharsetNode : Node {
+
+};
+
+struct ConcatNode : Node {
+
+};
+
+struct UnionNode : Node {
+
+};
+
+struct IntersectNode : Node {
+
+};
+
+struct MinusNode : Node {
+
+};
+
+struct XorNode : Node {
+
+};
+
+struct StarNode : Node {
+
+};
+
+struct PlusNode : Node {
+
+};
+
+struct RepeatNode : Node {
+
+};
+
+struct AlternateNode : Node {
+
+};
+
+struct ComplementNode : Node {
+
+};
+
+struct OptionalNode : Node {
+
+};
+
+struct NotGreedyNode : Node {
+
+};
+
+struct CaseInsensitiveNode : Node {
+
+};
+
+struct NumberedCapturingGroupNode : Node {
+
+};
+
+struct NamedCapturingGroupNode : Node {
+
+};
+
+struct NonCapturingGroupNode : Node {
 
 };
 
 
-
-int tokenize(std::string const &regex) {
+int parse(std::string const &regex) {
     bool in_char_set = false;
-    std::vector<token> output;
-    std::stack<int> stack;
+    std::vector<Node> nodes;
+    std::stack<int> operators;
 
     for (int i = 0; i < regex.size();) {
+        if (in_char_set) {
+            switch (regex[i]) {
+                case '(': break;
+            }
+        } else {
+
+        }
         if (regex[i] == '[') {
             if (in_char_set) {
                 output.emplace_back(TokenKind::op, '[');
             } else {
                 in_char_set = true;
             }
-        } else if (regex[i] == ']') {
-            if (in_char_set) {
-                in_char_set = false;
-            } else {
-
-            }
-        } else if (regex[i] == '\\') {
-
-        } else if (regex[i] == '(') {
-
-        } else if (regex[i] == ' ') {
-
-        } else if (regex[i] == ' ') {
-
-        } else if (regex[i] == ' ') {
-
-        } else if (regex[i] == ' ') {
-
-        } else if (regex[i] == ' ') {
-
-        } else if (regex[i] == ' ') {
-
-        } else if (regex[i] == ' ') {
-
-        } else if (regex[i] == ' ') {
-
-        } else if (regex[i] == ' ') {
-
-        } else if (regex[i] == ' ') {
-
         }
 
     }
-}
-
-
-int parse(std::string const &regex) {
-    bool in_char_set = false;
-    std::stack<int> hello;
-
-    for (char c : regex) {
-        if (c == '+') {
-
-        }
-    }
-    return 0;
 }
 
 
