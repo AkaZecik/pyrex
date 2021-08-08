@@ -25,6 +25,7 @@ class TestStringOperators(unittest.TestCase):
         # TODO: do we want to have it?
         # TODO: do we want it to be the same as ^?
         # ^
+        # maybe use ":"?
         pass
 
     def test_star(self) -> None:

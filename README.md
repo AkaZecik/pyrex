@@ -2,6 +2,24 @@
 
 ---
 
-### Python
+## Python
 
-Project is written in Python 3.9
+This project is written in Python 3.9
+
+
+## Operator precedence
+
+| Precedence | Operator            | Description           | Associativity |
+|------------|---------------------|-----------------------|---------------|
+|            | ( )                 |                       |               |
+|            | ~                   | case-insensitive      | Right-to-left |
+|            | *                   | star                  | Right-to-left |
+|            | +                   | plus                  | Moze left-to-right? |
+|            | {n} {n,} {,m} {n,m} | repeat exact or range |               |
+|            | !                   | complement            |               |
+|            | -                   | subtraction           |               |
+|            | ·                   | concatenation         | Left-to-right |
+|            | &                   | intersection          |               |
+|            | :                   | xor                   |               |
+|            | |                   | union                 |               |
+|            |                     |                       |               |

@@ -3,6 +3,10 @@
 //
 
 /* Repetition qualifiers (*, +, ?, {m,n}, etc) cannot be directly nested. */
+/*
+ * TODO:
+ *  - handle all ASCII (not just printable ones?). Watch out for sign of c++ char.
+ */
 
 #include <iostream>
 #include <stack>
@@ -10,7 +14,7 @@
 #include <vector>
 
 
-enum class NodeKind {
+enum class NodeType {
     CHAR,
     ESCAPE,
     CHARSET,
@@ -25,7 +29,6 @@ enum class NodeKind {
     ALTERNATE,
     COMPLEMENT,
     OPTIONAL,
-    NOT_GREEDY,  /* does it make sense in DFA implementation? */
     CASE_INSENSITIVE,
     NUMBERED_CAPTURE_GROUP,
     NAMED_CAPTURE_GROUP,
@@ -34,20 +37,26 @@ enum class NodeKind {
 
 
 struct Node {
+//    NodeType node_type;
+//
+//    NodeType get_node_type() const {
+//        return node_type;
+//    }
+
     virtual void sth() = 0;
 };
 
-struct CharNode : Node {
+struct AsciiCharNode : Node {
     char value;
 
-    explicit CharNode(char value) : value(value) {}
+    explicit AsciiCharNode(char value) : value(value) {}
 };
 
-struct RangeNode : Node {
+struct CharsRangeNode : Node {
     char begin;
     char end;
 
-    RangeNode(char begin, char end) : begin(begin), end(end) {}
+    CharsRangeNode(char begin, char end) : begin(begin), end(end) {}
 };
 
 struct EscapeCharNode : Node {
@@ -57,102 +66,119 @@ struct EscapeCharNode : Node {
     explicit EscapeCharNode(char value) : value(value) {}
 };
 
-struct CharsetNode : Node {
-    std::vector<Node> sets;
+struct OperatorNode : Node {
+
 };
 
-struct UnaryOperatorNode : Node {
-    Node *operand;
-
-    explicit UnaryOperatorNode(Node *operand) : operand(operand) {}
+struct CharsetNode : OperatorNode {
+    std::vector<Node *> sets; /* maybe differently */
 };
 
-struct BinaryOperatorNode : Node {
-    Node *left_operand;
-    Node *right_operand;
+struct UnaryOperatorNode : OperatorNode {
+    Node *operand = nullptr;
+};
 
-    BinaryOperatorNode(Node *left_operand, Node *right_operand) : left_operand(left_operand),
-                                                                  right_operand(right_operand) {}
+struct BinaryOperatorNode : OperatorNode {
+    Node *left_operand = nullptr;
+    Node *right_operand = nullptr;
 };
 
 struct ConcatNode : BinaryOperatorNode {
-    using BinaryOperatorNode::BinaryOperatorNode;
 };
 
 struct UnionNode : BinaryOperatorNode {
-    using BinaryOperatorNode::BinaryOperatorNode;
 };
 
 struct IntersectNode : BinaryOperatorNode {
-    using BinaryOperatorNode::BinaryOperatorNode;
 };
 
 struct MinusNode : BinaryOperatorNode {
-    using BinaryOperatorNode::BinaryOperatorNode;
 };
 
 struct XorNode : BinaryOperatorNode {
-    using BinaryOperatorNode::BinaryOperatorNode;
 };
 
 struct StarNode : UnaryOperatorNode {
-    using UnaryOperatorNode::UnaryOperatorNode;
 };
 
 struct PlusNode : UnaryOperatorNode {
-    using UnaryOperatorNode::UnaryOperatorNode;
 };
 
 struct RepeatNode : UnaryOperatorNode {
     long long min;
     long long max;
 
-    RepeatNode(Node *operand, long long min, long long max) : UnaryOperatorNode(operand), min(min), max(max) {
-        // assert 0 <= min <= max
-    }
+    RepeatNode(long long min, long long max) : min(min), max(max) {}
 };
 
 struct AlternateNode : BinaryOperatorNode {
-    using BinaryOperatorNode::BinaryOperatorNode;
 };
 
 struct ComplementNode : UnaryOperatorNode {
-    using UnaryOperatorNode::UnaryOperatorNode;
 };
 
 struct OptionalNode : UnaryOperatorNode {
-    using UnaryOperatorNode::UnaryOperatorNode;
-};
-
-struct NotGreedyNode : UnaryOperatorNode {
-    using UnaryOperatorNode::UnaryOperatorNode;
-    /* does it make sense in DFA implementation?
-     * can we somehow emulate it? */
 };
 
 struct CaseInsensitiveNode : UnaryOperatorNode {
-    using UnaryOperatorNode::UnaryOperatorNode;
 };
 
 struct GroupNode : UnaryOperatorNode {
-    using UnaryOperatorNode::UnaryOperatorNode;
 };
 
 struct NumberedCapturingGroupNode : GroupNode {
     long long number;
 
-    explicit NumberedCapturingGroupNode(Node *operand, long long number) : GroupNode(operand), number(number) {}
+    explicit NumberedCapturingGroupNode(long long number) : number(number) {}
 };
 
 struct NamedCapturingGroupNode : GroupNode {
     std::string name;
 
-    NamedCapturingGroupNode(Node *operand, std::string name) : GroupNode(operand), name(std::move(name)) {}
+    explicit NamedCapturingGroupNode(std::string name) : name(std::move(name)) {}
 };
 
 struct NonCapturingGroupNode : GroupNode {
-    using GroupNode::GroupNode;
 };
+
+
+inline bool is_literal(char c) {
+    static std::string const literals =
+        "abcdefghijklmnopqrstuvwxyz"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "0123456789 \"#%',/:;<=>@_`";
+    return literals.find(c) != std::string::npos || c < ' ';
+}
+
+
+inline bool before_concat(char c) {
+    static std::string const chars = "])}+*";
+    return chars.find(c) != std::string::npos || is_literal(c);
+}
+
+
+inline bool after_concat(char c) {
+    static std::string const chars = "[(!~";
+    return chars.find(c) != std::string::npos || is_literal(c);
+}
+
+
+int operator_precedence(OperatorNode *node) {
+    /* dodawaj powoli, pokolei, nie wszystko na raz */
+    if (dynamic_cast<CaseInsensitiveNode *>(node)) {
+        return 0;
+    } else if (dynamic_cast<PlusNode *>(node)) {
+        return 1;
+    }
+    switch (op) {
+        case '~':
+            return 0;
+        case '*':
+        case '+':
+        case '{':
+            return 1;
+    }
+}
 
 
 struct Regex {
@@ -163,35 +189,46 @@ struct Regex {
     }
 
     static Node *parse(std::string const &regex) {
+        bool in_char_set = false;
+        std::vector<Node *> nodes;
+        std::vector<Node *> operators;
+
+        auto move_operator = [&nodes, &operators]() {
+        };
+
+        for (int i = 0; i < regex.size();) {
+            char c = regex[i];
+
+            if (in_char_set) {
+                if ('0' <= c && c <= '9' || 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z') {
+
+                }
+                switch (regex[i]) {
+                    case '*':
+                        break;
+                    default:
+                        std::cout << i << " " << regex[i] << std::endl;
+                        throw;
+                }
+            } else {
+                /* check for (implicit) concatenation operator */
+                if (i > 0 && before_concat(regex[i - 1]) && after_concat(regex[i])) {
+                    Node *node = new ConcatNode();
+                    operators.
+                }
+
+
+                if ('0' <= c && c <= '9' || 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z') {
+                    if ((!nodes.empty() || !operators.empty() && operators.back() != '(') && c != '|') {
+//                        operators.push_back('.');
+                    }
+                }
+            }
+        }
+
         return nullptr;
     }
 };
-
-
-int parse(std::string const &regex) {
-    bool in_char_set = false;
-    std::vector<Node> nodes;
-    std::stack<int> operators;
-
-    for (int i = 0; i < regex.size();) {
-        if (in_char_set) {
-            switch (regex[i]) {
-                case '(':
-                    break;
-            }
-        } else {
-
-        }
-        if (regex[i] == '[') {
-            if (in_char_set) {
-                output.emplace_back(TokenKind::op, '[');
-            } else {
-                in_char_set = true;
-            }
-        }
-
-    }
-}
 
 
 int print() {
@@ -206,10 +243,10 @@ int print() {
 
 
 int main(int argc, char **argv) {
-    std::string a;
-    std::cin >> a;
-    std::cout << "Hello " << a << std::endl;
+    std::string input;
+    std::cin >> input;
+    std::cout << "Hello " << input << std::endl;
     print();
-    parse(a);
+    Regex regex(input);
     return 0;
 }
