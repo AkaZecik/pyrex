@@ -152,7 +152,7 @@ inline bool is_literal(char c) {
 
 
 inline bool before_concat(char c) {
-    static std::string const chars = "])}+*";
+    static std::string const chars = "])}+*?";
     return chars.find(c) != std::string::npos || is_literal(c);
 }
 
@@ -163,21 +163,9 @@ inline bool after_concat(char c) {
 }
 
 
-int operator_precedence(OperatorNode *node) {
-    /* dodawaj powoli, pokolei, nie wszystko na raz */
-    if (dynamic_cast<CaseInsensitiveNode *>(node)) {
-        return 0;
-    } else if (dynamic_cast<PlusNode *>(node)) {
-        return 1;
-    }
-    switch (op) {
-        case '~':
-            return 0;
-        case '*':
-        case '+':
-        case '{':
-            return 1;
-    }
+inline bool can_insert_concat(char prev, char curr) {
+    //
+    return (prev == ')' || prev == ']' || prev == '}' || prev == '*' || prev == '+' || prev == '?') && (curr == '(' || curr == '[' || curr == '!' || curr == '~' || );
 }
 
 
@@ -193,37 +181,9 @@ struct Regex {
         std::vector<Node *> nodes;
         std::vector<Node *> operators;
 
-        auto move_operator = [&nodes, &operators]() {
-        };
 
         for (int i = 0; i < regex.size();) {
-            char c = regex[i];
-
-            if (in_char_set) {
-                if ('0' <= c && c <= '9' || 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z') {
-
-                }
-                switch (regex[i]) {
-                    case '*':
-                        break;
-                    default:
-                        std::cout << i << " " << regex[i] << std::endl;
-                        throw;
-                }
-            } else {
-                /* check for (implicit) concatenation operator */
-                if (i > 0 && before_concat(regex[i - 1]) && after_concat(regex[i])) {
-                    Node *node = new ConcatNode();
-                    operators.
-                }
-
-
-                if ('0' <= c && c <= '9' || 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z') {
-                    if ((!nodes.empty() || !operators.empty() && operators.back() != '(') && c != '|') {
-//                        operators.push_back('.');
-                    }
-                }
-            }
+            if (i > 0 && (regex[i - 1]))
         }
 
         return nullptr;
