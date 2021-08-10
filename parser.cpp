@@ -253,7 +253,8 @@ struct Parser {
                 GroupNode *node = nullptr;  // sprawdz jaka to grupa!
                 operators.push_back(node);
             } else if (token.type == TokenType::RPAREN) {
-                while (!operators.empty() && operators.back()->type() != InternalNode::Type::GROUP) {
+                while (!operators.empty() &&
+                       operators.back()->type() != InternalNode::Type::GROUP) {
                     auto op = reinterpret_cast<OperatorNode *>(operators.back());
                     operators.pop_back();
                     push_node(op);
@@ -347,46 +348,31 @@ struct Parser {
 
     void interpret_operator(OperatorNode *op) {
         if (op->arity() == 1) {
-            auto _op = reinterpret_cast<UnaryOperatorNode *>(op);
+            auto uop = reinterpret_cast<UnaryOperatorNode *>(op);
 
-            if (_op->placement() == UnaryOperatorNode::Placement::LEFT) {
+            if (uop->placement() == UnaryOperatorNode::Placement::LEFT) {
                 operators.push_back(op);
             } else {
-                while (!operators.empty() && operators.back()->precedence() >= op->precedence()) {
-                    push_node(operators.back());
-                    operators.pop_back();
-                }
-
+                drop_operators_with_higher_precedence(op);
                 push_node(op);
             }
         } else {
-            while (!operators.empty() && operators.back()->precedence() >= op->precedence()) {
-                push_node(operators.back());
-                operators.pop_back();
-            }
-
+            drop_operators_with_higher_precedence(op);
             operators.push_back(op);
         }
     };
-};
 
+    void drop_operators_with_higher_precedence(OperatorNode *op) {
+        while (!operators.empty() &&
+               operators.back()->type() != InternalNode::Type::GROUP) {
+            auto back = reinterpret_cast<OperatorNode *>(operators.back());
 
-int print() {
-    std::string a[] = {
-        "abc", "ab|cd", "a(ba)*", "(a)+a*(a+)+", "[a-cx-z]abc", "((a))((b)|c)",
-    };
-    for (std::string const &b : a) {
-        std::cout << b << std::endl;
+            if (back->precedence() >= op->precedence()) {
+                operators.pop_back();
+                push_node(back);
+            } else {
+                break;
+            }
+        }
     }
-    return 0;
-}
-
-
-int main(int argc, char **argv) {
-    std::string input;
-    std::cin >> input;
-    std::cout << "Hello " << input << std::endl;
-    print();
-    Parser regex(input);
-    return 0;
-}
+};
