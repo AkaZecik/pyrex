@@ -8,6 +8,7 @@
 #include <stack>
 #include <utility>
 #include <vector>
+#include <typeindex>
 #include "tokenizer.cpp"
 
 
@@ -29,7 +30,7 @@ int hehe() {
 }
 
 
-enum class NodeType {
+enum class NodeType2 {
     CHAR,
     ESCAPE,
     CHARSET,
@@ -157,31 +158,72 @@ struct NonCapturingGroupNode : GroupNode {
 };
 
 
-inline bool is_literal(char c) {
-    static std::string const literals =
-        "abcdefghijklmnopqrstuvwxyz"
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "0123456789 \"#%',/:;<=>@_`";
-    return literals.find(c) != std::string::npos || c < ' ';
+enum class NodeType {
+    NUMBERED_CG,
+    NAMED_CG,
+    NON_CG,
+    CHARSET,
+    CHARSET_COMPLEMENT,
+    RANGE,
+    STAR,
+    PLUS,
+    COMPLEMENT,
+    UNION,
+    INTERSECTION,
+    OPTIONAL,
+    EXACT_REPEAT,
+    MIN_REPEAT,
+    MAX_REPEAT,
+    RANGE_REPEAT,
+    TILDE,
+    PERCENT,
+};
+
+struct NodeRepr {
+    NodeType type;
+    union {
+        char c;
+        unsigned int i;
+        std::string s;
+    } value;
+};
+
+
+int operator_arity(OperatorNode *node) {
+    if (dynamic_cast<UnaryOperatorNode *>(node)) {
+        return 1;
+    } else if (dynamic_cast<BinaryOperatorNode *>(node)) {
+        return 2;
+    } else {
+        throw std::runtime_error(
+            "Expected either UnaryOperatorNode or BinaryOperatorNode"
+        );
+    }
 }
 
 
-inline bool before_concat(char c) {
-    static std::string const chars = "])}+*?";
-    return chars.find(c) != std::string::npos || is_literal(c);
-}
+int operator_precedence(OperatorNode *node) {
+    auto ti = std::type_index(typeid(*node));
 
+    if (ti == std::type_index(typeid(NamedCapturingGroupNode)) ||
+        ti == std::type_index(typeid(NumberedCapturingGroupNode)) ||
+        ti == std::type_index(typeid(NonCapturingGroupNode))) {
+        return 0;
+    }
 
-inline bool after_concat(char c) {
-    static std::string const chars = "[(!~";
-    return chars.find(c) != std::string::npos || is_literal(c);
-}
+    if (ti == std::type_index(typeid(CaseInsensitiveNode))) {
+        return 1;
+    }
 
+    if (ti == std::type_index(typeid()))
 
-inline bool can_insert_concat(char prev, char curr) {
-    //
-    return (prev == ')' || prev == ']' || prev == '}' || prev == '*' || prev == '+' || prev == '?') &&
-           (curr == '(' || curr == '[' || curr == '!' || curr == '~' || );
+    if (ti == std::type_index(typeid()))
+
+    if (ti == std::type_index(typeid(GroupNode))) {
+
+    } else if (ti == std::type_index(typeid(StarNode))) {
+        return 1;
+    } else if (ti == std::type_index(typeid()))
 }
 
 
@@ -204,6 +246,7 @@ struct Regex {
             Token token = tokens[i];
 
             if (i > 0 && before_concat(tokens[i - 1]) && after_concat(tokens[i])) {
+
                 // interpret 'concat'
             }
 
@@ -224,7 +267,7 @@ struct Regex {
 
             } else if (token.type == TokenType::)
 
-            break;
+                break;
         }
     }
 
