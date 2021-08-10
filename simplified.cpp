@@ -34,7 +34,7 @@ struct Node {
 
 Node *build_tree(std::vector<char> const &onp) {
     std::vector<Node *> results;
-    int id = 0;
+    int id = 1;
 
     for (char c : onp) {
         if (c == '*') {
@@ -64,6 +64,7 @@ Node *build_tree(std::vector<char> const &onp) {
         } else {
             results.push_back(new Node{NodeType::CHAR,
                                        {.leaf = {.c = c, .id = id}}});
+            id += 1;
         }
     }
 
@@ -232,7 +233,43 @@ std::set<int> last_pos(Node *node) {
     }
 }
 
+void print(std::set<int> const &set) {
+    std::cout << "{";
+
+    for (int i : set) {
+        std::cout << i << " ";
+    }
+}
+
+void dfs(Node *node) {
+    if (node->type == NodeType::EMPTY) {
+        std::cout << "e" << std::endl;
+    } else if (node->type == NodeType::CHAR) {
+        std::cout << node->value.leaf.id << "" << std::endl;
+    } else if (node->type == NodeType::STAR) {
+        dfs(node->value.operand);
+        std::cout << "*" << std::endl;
+    } else if (node->type == NodeType::CONCAT) {
+        dfs(node->value.children.left_operand);
+        dfs(node->value.children.right_operand);
+        std::cout << "." << std::endl;
+    } else {
+        dfs(node->value.children.left_operand);
+        dfs(node->value.children.right_operand);
+        std::cout << "|" << std::endl;
+    }
+
+    std::cout << "  nullable: " << nullable(node) << std::endl;
+    std::cout << "  first_pos: ";
+    print(first_pos(node));
+    std::cout << "}" << std::endl;
+    std::cout << "  last_pos: ";
+    print(last_pos(node));
+    std::cout << "}" << std::endl;
+}
+
 int main() {
+    std::cout << std::boolalpha;
     std::string regex;
     std::cin >> regex;
     auto onp = get_onp(regex);
@@ -242,4 +279,13 @@ int main() {
     }
 
     std::cout << std::endl;
+
+    for (int i : first_pos(parse(regex))) {
+        std::cout << i << " ";
+    }
+
+    std::cout << std::endl;
+    dfs(parse(regex));
 }
+
+// (a|b)*(a(b|e)c*)*
