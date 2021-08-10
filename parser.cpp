@@ -5,12 +5,6 @@
 /* Repetition qualifiers (*, +, ?, {m,n}, etc) cannot be directly nested. */
 /* ja pozwalam! */
 
-/* TODO: splitnij ten plik na dwa: parser + regex, regex ma tylko i wylacznie
- *  wciagnac parser i go odpalic i zapisac sobie wynikowe drzewko.
- *  Klasa i plik Regex maja obslugiwac logike juz sparsowanego drzewka,
- *  nie obchodza ich szczegoly parsowania.
- */
-
 #include <iostream>
 #include <stack>
 #include <utility>
@@ -29,6 +23,11 @@ struct Node {
 
 
 struct InternalNode : Node {
+    enum class Type {
+        GROUP, OPERATOR
+    };
+
+    virtual Type type() = 0;
 };
 
 struct LeafNode : Node {
@@ -70,6 +69,10 @@ struct CharsetNode : LeafNode {
 
 struct GroupNode : InternalNode {
     Node *operand = nullptr;
+
+    Type type() override {
+        return Type::GROUP;
+    }
 };
 
 struct NumberedCapturingGroupNode : GroupNode {
@@ -96,6 +99,10 @@ struct OperatorNode : InternalNode {
     virtual int arity() = 0;
 
     virtual int precedence() = 0;
+
+    Type type() override {
+        return Type::OPERATOR;
+    }
 };
 
 struct UnaryOperatorNode : OperatorNode {
@@ -218,85 +225,46 @@ struct UnionNode : BinaryOperatorNode {
 
 
 /************************************************
- *                    Regex                     *
+ *                    Parser                     *
  ************************************************/
 
-struct Regex {
+struct Parser {
     std::string const &regex;
-    Node *tree;
+    std::vector<Node *> nodes;
+    std::vector<InternalNode *> operators;
 
-    explicit Regex(std::string const &regex) : regex(regex) {
-        tree = parse(regex);
-    }
+    explicit Parser(std::string const &regex) : regex(regex) {}
 
-    static Node *parse(std::string const &regex) {
+    Node *parse() {
         Tokenizer tokenizer(regex);
-        std::vector<Token> tokens = tokenizer.get_all_tokens();
-        std::vector<Node *> nodes;
-        std::vector<OperatorNode *> operators;
+        auto tokens = tokenizer.get_all_tokens();
         int i = 0;
-
-        auto push_node = [&nodes](OperatorNode *op) {
-            if (nodes.size() < op->arity()) {
-                // error!
-            }
-
-            if (op->arity() == 1) {
-                auto _op = reinterpret_cast<UnaryOperatorNode *>(op);
-                Node *operand = nodes.back();
-                nodes.pop_back();
-                _op->operand = operand;
-            } else {
-                auto _op = reinterpret_cast<BinaryOperatorNode *>(op);
-                Node *right_operand = nodes.back();
-                nodes.pop_back();
-                Node *left_operand = nodes.back();
-                nodes.pop_back();
-                _op->left_operand = left_operand;
-                _op->right_operand = right_operand;
-            }
-
-            nodes.push_back(op);
-        };
-
-        auto interpret_operator = [&operators, &push_node](OperatorNode *op) {
-            if (op->arity() == 1) {
-                auto _op = reinterpret_cast<UnaryOperatorNode *>(op);
-
-                if (_op->placement() == UnaryOperatorNode::Placement::LEFT) {
-                    operators.push_back(op);
-                } else {
-                    while (!operators.empty() && operators.back()->precedence() >= op->precedence()) {
-                        push_node(operators.back());
-                        operators.pop_back();
-                    }
-
-                    push_node(op);
-                }
-            } else {
-                while (!operators.empty() && operators.back()->precedence() >= op->precedence()) {
-                    push_node(operators.back());
-                    operators.pop_back();
-                }
-
-                operators.push_back(op);
-            }
-        };
 
         while (true) {
             Token token = tokens[i];
 
             if (i > 0 && can_insert_concat(tokens[i - 1], tokens[i])) {
-                auto concat = new ConcatNode();
-                // interpret 'concat'
+                interpret_operator(new ConcatNode());
             }
 
             if (token.type == TokenType::LBRACK) {
                 // sparsuj charset
             } else if (token.type == TokenType::LPAREN) {
-                // sprawdz jaka to grupa
-                // wrzuc na stos
+                GroupNode *node = nullptr;  // sprawdz jaka to grupa!
+                operators.push_back(node);
             } else if (token.type == TokenType::RPAREN) {
+                while (!operators.empty() && operators.back()->type() != InternalNode::Type::GROUP) {
+                    auto op = reinterpret_cast<OperatorNode *>(operators.back());
+                    operators.pop_back();
+                    push_node(op);
+                }
+
+                if (operators.empty()) {
+                    // error!
+                }
+
+                push_node(operators.back());
+                operators.pop_back();
                 // zdejmuj operatory, az napotkasz lewy nawias
             } else if (token.type == TokenType::LITERAL) {
 
@@ -306,9 +274,9 @@ struct Regex {
 
             } else if (token.type == TokenType::LONG_UNICODE) {
 
-            } else if (token.type == TokenType::)
+            }
 
-                break;
+            break;
         }
     }
 
@@ -343,6 +311,63 @@ struct Regex {
             token.type == TokenType::ESCAPE // check if special or not
         );
     }
+
+    void push_node(InternalNode *op) {
+        if (op->type() == InternalNode::Type::GROUP) {
+            if (nodes.empty()) {
+                // error!
+            }
+
+
+        } else {
+            auto _op = reinterpret_cast<OperatorNode *>(op);
+
+            if (nodes.size() < _op->arity()) {
+                // error!
+            }
+
+            if (_op->arity() == 1) {
+                auto uop = reinterpret_cast<UnaryOperatorNode *>(_op);
+                Node *operand = nodes.back();
+                nodes.pop_back();
+                uop->operand = operand;
+            } else {
+                auto bop = reinterpret_cast<BinaryOperatorNode *>(_op);
+                Node *right_operand = nodes.back();
+                nodes.pop_back();
+                Node *left_operand = nodes.back();
+                nodes.pop_back();
+                bop->left_operand = left_operand;
+                bop->right_operand = right_operand;
+            }
+
+            nodes.push_back(_op);
+        }
+    };
+
+    void interpret_operator(OperatorNode *op) {
+        if (op->arity() == 1) {
+            auto _op = reinterpret_cast<UnaryOperatorNode *>(op);
+
+            if (_op->placement() == UnaryOperatorNode::Placement::LEFT) {
+                operators.push_back(op);
+            } else {
+                while (!operators.empty() && operators.back()->precedence() >= op->precedence()) {
+                    push_node(operators.back());
+                    operators.pop_back();
+                }
+
+                push_node(op);
+            }
+        } else {
+            while (!operators.empty() && operators.back()->precedence() >= op->precedence()) {
+                push_node(operators.back());
+                operators.pop_back();
+            }
+
+            operators.push_back(op);
+        }
+    };
 };
 
 
@@ -362,6 +387,6 @@ int main(int argc, char **argv) {
     std::cin >> input;
     std::cout << "Hello " << input << std::endl;
     print();
-    Regex regex(input);
+    Parser regex(input);
     return 0;
 }
