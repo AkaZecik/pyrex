@@ -6,6 +6,7 @@
 #include <utility>
 #include <vector>
 #include <set>
+#include <unordered_map>
 
 /*
  * 0 - *
@@ -268,6 +269,36 @@ void dfs(Node *node) {
     std::cout << "}" << std::endl;
 }
 
+void next_pos_internal(Node *node, std::unordered_map<int, std::set<int>> &map) {
+    if (node->type == NodeType::STAR) {
+        next_pos_internal(node->value.operand, map);
+
+        for (int i : last_pos(node)) {
+            for (int j : first_pos(node)) {
+                map[i].emplace(j);
+            }
+        }
+    } else if (node->type == NodeType::CONCAT) {
+        next_pos_internal(node->value.children.left_operand, map);
+        next_pos_internal(node->value.children.right_operand, map);
+
+        for (int i : last_pos(node->value.children.left_operand)) {
+            for (int j : first_pos(node->value.children.right_operand)) {
+                map[i].emplace(j);
+            }
+        }
+    } else if (node->type == NodeType::UNION) {
+        next_pos_internal(node->value.children.left_operand, map);
+        next_pos_internal(node->value.children.right_operand, map);
+    }
+}
+
+auto next_pos(Node *node) {
+    std::unordered_map<int, std::set<int>> map;
+    next_pos_internal(node, map);
+    return map;
+}
+
 int main() {
     std::cout << std::boolalpha;
     std::string regex;
@@ -286,6 +317,15 @@ int main() {
 
     std::cout << std::endl;
     dfs(parse(regex));
+
+    for (const auto& pair : next_pos(parse(regex))) {
+        for (int next : pair.second) {
+            std::cout << pair.first << " " << next << std::endl;
+        }
+    }
 }
 
+/* TODO: dopisac # */
+
 // (a|b)*(a(b|e)c*)*
+// (a|b)*a(b|e)c*
