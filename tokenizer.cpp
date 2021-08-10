@@ -12,6 +12,10 @@ struct TokenizationException : std::runtime_error {
     explicit TokenizationException(std::string const &what) : std::runtime_error(what) {}
 };
 
+struct PrematureEndOfPatternError : TokenizationException {
+    explicit PrematureEndOfPatternError(long long position) : TokenizationException("") {}
+};
+
 enum class TokenType {
     LPAREN, // (
     RPAREN, // )
@@ -41,31 +45,18 @@ enum class TokenType {
     END, // end of tokens
 };
 
+union TokenValue {
+    char c;
+    unsigned int i;
+};
+
 struct Token {
     TokenType const type;
-    void *const value = nullptr;
+    TokenValue value;
 
-    explicit Token(TokenType type) : type(type) {}
-
-    Token(TokenType type, void *value) : type(type), value(value) {}
-
-    ~Token() {
-        if (value != nullptr) {
-            switch (type) {
-                case TokenType::ESCAPE:
-                case TokenType::LITERAL:
-                    delete (char *) value;
-                    break;
-                case TokenType::BYTE:
-                case TokenType::SHORT_UNICODE:
-                case TokenType::LONG_UNICODE:
-                    delete (int *) value;
-                    break;
-                default:
-                    break;
-            }
-        }
-    }
+    explicit Token(TokenType type) : type(type), value{} {}
+    Token(TokenType type, unsigned int i) : type(type), value{.i = i} {}
+    Token(TokenType type, char c) : type(type), value{.c = c} {}
 };
 
 struct Tokenizer {
@@ -74,32 +65,23 @@ struct Tokenizer {
 
     explicit Tokenizer(std::string regex) : regex(std::move(regex)) {}
 
-    std::vector<Token *> get_all_tokens() {
-        std::vector<Token *> tokens;
+    std::vector<Token> get_all_tokens() {
+        std::vector<Token> tokens;
 
-        try {
-            while (true) {
-                Token *token = get_token();
+        while (true) {
+            Token token = get_token();
 
-                if (token->type != TokenType::END) {
-                    tokens.push_back(token);
-                    break;
-                }
+            if (token.type == TokenType::END) {
+                return tokens;
+            } else {
+                tokens.push_back(token);
             }
-        } catch (TokenizationException const &e) {
-            for (Token *token : tokens) {
-                delete token;
-            }
-
-            throw e;
         }
-
-        return tokens;
     }
 
-    Token *get_token() {
+    Token get_token() {
         if (curr_pos >= regex.size()) {
-            return new Token(TokenType::END);
+            return Token(TokenType::END);
         }
 
         char c = regex[curr_pos];
@@ -107,53 +89,53 @@ struct Tokenizer {
 
         switch (c) {
             case '(':
-                return new Token(TokenType::LPAREN);
+                return Token(TokenType::LPAREN);
             case ')':
-                return new Token(TokenType::RPAREN);
+                return Token(TokenType::RPAREN);
             case '[':
-                return new Token(TokenType::LBRACK);
+                return Token(TokenType::LBRACK);
             case ']':
-                return new Token(TokenType::RBRACK);
+                return Token(TokenType::RBRACK);
             case '{':
-                return new Token(TokenType::LCURLY);
+                return Token(TokenType::LCURLY);
             case '}':
-                return new Token(TokenType::RCURLY);
+                return Token(TokenType::RCURLY);
             case '<':
-                return new Token(TokenType::LARROW);
+                return Token(TokenType::LARROW);
             case '>':
-                return new Token(TokenType::RARROW);
+                return Token(TokenType::RARROW);
             case '^':
-                return new Token(TokenType::POWER);
+                return Token(TokenType::POWER);
             case '$':
-                return new Token(TokenType::DOLAR);
+                return Token(TokenType::DOLAR);
             case '?':
-                return new Token(TokenType::QMARK);
+                return Token(TokenType::QMARK);
             case '!':
-                return new Token(TokenType::EMARK);
+                return Token(TokenType::EMARK);
             case ':':
-                return new Token(TokenType::COLON);
+                return Token(TokenType::COLON);
             case '-':
-                return new Token(TokenType::MINUS);
+                return Token(TokenType::MINUS);
             case '*':
-                return new Token(TokenType::STAR);
+                return Token(TokenType::STAR);
             case '+':
-                return new Token(TokenType::PLUS);
+                return Token(TokenType::PLUS);
             case '%':
-                return new Token(TokenType::PERCENT);
+                return Token(TokenType::PERCENT);
             case '~':
-                return new Token(TokenType::TILDE);
+                return Token(TokenType::TILDE);
             case '|':
-                return new Token(TokenType::UNION);
+                return Token(TokenType::UNION);
             case '&':
-                return new Token(TokenType::INTERSECTION);
+                return Token(TokenType::INTERSECTION);
             case '\\':
                 return tokenize_escape();
             default:
-                return new Token(TokenType::LITERAL, new char(c));
+                return {TokenType::LITERAL, c};
         }
     }
 
-    Token *tokenize_escape() {
+    Token tokenize_escape() {
         if (curr_pos == regex.size()) {
             throw std::string(
                 "Bad escape at position " +
@@ -165,14 +147,33 @@ struct Tokenizer {
         curr_pos += 1;
 
         switch (c) {
-            case 'x':
-                return get_byte_escape();
-            case 'u':
-                return get_short_unicode_escape();
-            case 'U':
-                return get_long_unicode_escape();
+            case 'x': {
+                unsigned long value = parse_hex(2);
+                curr_pos += 2;
+                return {TokenType::BYTE, (unsigned int) value};
+            }
+            case 'u': {
+                unsigned long value = parse_hex(4);
+                curr_pos += 4;
+                return {TokenType::SHORT_UNICODE, (unsigned int) value};
+            }
+            case 'U': {
+                unsigned long value = parse_hex(8);
+                curr_pos += 8;
+
+                if (value > 0x10ffffUL) {
+                    throw std::string(
+                        "Bad unicode character escape at position " +
+                        std::to_string(curr_pos - 2) +
+                        ": maximum allowed value is \\U0010FFFF, got " +
+                        regex.substr(curr_pos - 2, curr_pos + 8)
+                    );
+                }
+
+                return {TokenType::LONG_UNICODE, (unsigned int) value};
+            }
             default:
-                return new Token(TokenType::LITERAL, new char(c));
+                return {TokenType::LITERAL, c};
         }
     }
 
@@ -180,116 +181,26 @@ struct Tokenizer {
         return '0' <= c && c <= '9' || 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z';
     }
 
-    Token *get_byte_escape() {
-        if (curr_pos + 2 > regex.size()) {
+    unsigned long parse_hex(int count) {
+        if (curr_pos + count > regex.size()) {
             throw std::string(
-                "Bad byte character escape at position " +
+                "Bad escape at position " +
                 std::to_string(curr_pos - 2) +
                 ": premature end of pattern"
             );
         }
 
-        if (!is_hex_digit(regex[curr_pos]) || !is_hex_digit(regex[curr_pos + 1])) {
-            throw std::string(
-                "Bad byte character escape at position " +
-                std::to_string(curr_pos - 2) +
-                ": incorrect escape value " +
-                regex.substr(curr_pos - 2, curr_pos + 2)
-            );
+        for (int i = curr_pos; i < curr_pos + count; ++i) {
+            if (!is_hex_digit(regex[i])) {
+                throw std::string(
+                    "Bad byte character escape at position " +
+                    std::to_string(curr_pos - 2) +
+                    ": incorrect escape value " +
+                    regex.substr(curr_pos - 2, curr_pos + count)
+                );
+            }
         }
 
-        int value = std::stoi(regex.substr(curr_pos, curr_pos + 2), nullptr, 16);
-        curr_pos += 2;
-        return new Token(TokenType::BYTE, new int(value));
-    }
-
-    Token *get_short_unicode_escape() {
-        if (curr_pos + 4 > regex.size()) {
-            throw std::string(
-                "Bad unicode escape at position " +
-                std::to_string(curr_pos - 2) +
-                ": premature end of pattern"
-            );
-        }
-
-        if (!is_hex_digit(regex[curr_pos]) ||
-            !is_hex_digit(regex[curr_pos + 1]) ||
-            !is_hex_digit(regex[curr_pos + 2]) ||
-            !is_hex_digit(regex[curr_pos + 3])
-            ) {
-            throw std::string(
-                "Bad unicode character escape at position " +
-                std::to_string(curr_pos - 2) +
-                ": incorrect escape value " +
-                regex.substr(curr_pos - 2, curr_pos + 4)
-            );
-        }
-
-        int value = std::stoi(regex.substr(curr_pos, curr_pos + 4), nullptr, 16);
-        curr_pos += 4;
-        return new Token(TokenType::BYTE, new int(value));
-    }
-
-    Token *get_long_unicode_escape() {
-        if (curr_pos + 8 > regex.size()) {
-            throw std::string(
-                "Bad unicode escape at position " +
-                std::to_string(curr_pos - 2) +
-                ": premature end of pattern"
-            );
-        }
-
-        if (!is_hex_digit(regex[curr_pos]) ||
-            !is_hex_digit(regex[curr_pos + 1]) ||
-            !is_hex_digit(regex[curr_pos + 2]) ||
-            !is_hex_digit(regex[curr_pos + 3]) ||
-            !is_hex_digit(regex[curr_pos + 4]) ||
-            !is_hex_digit(regex[curr_pos + 5]) ||
-            !is_hex_digit(regex[curr_pos + 6]) ||
-            !is_hex_digit(regex[curr_pos + 7])
-            ) {
-            throw std::string(
-                "Bad unicode character escape at position " +
-                std::to_string(curr_pos - 2) +
-                ": incorrect escape value " +
-                regex.substr(curr_pos - 2, curr_pos + 8)
-            );
-        }
-
-        if (regex[curr_pos] != '0' || regex[curr_pos + 1] != '0') {
-            throw std::string(
-                "Bad unicode character escape at position " +
-                std::to_string(curr_pos - 2) +
-                ": maximum allowed value is \\U0010FFFF, got " +
-                regex.substr(curr_pos - 2, curr_pos + 8)
-            );
-        }
-
-        int value = std::stoi(regex.substr(curr_pos, curr_pos + 8), nullptr, 16);
-        curr_pos += 8;
-        return new Token(TokenType::BYTE, new int(value));
-    }
-
-    static inline Token *is_short_unicode_escape(std::string const &regex, long long pos) {
-        if (pos + 6 <= regex.size() &&
-            regex[pos + 1] == 'u' &&
-            is_hex_digit(regex[pos + 2]) &&
-            is_hex_digit(regex[pos + 3]) &&
-            is_hex_digit(regex[pos + 4]) &&
-            is_hex_digit(regex[pos + 5])) {
-            int *value = new int(std::stoi(regex.substr(pos + 2, pos + 6), nullptr, 16));
-            return new Token(TokenType::SHORT_UNICODE, value);
-        }
-
-        return;
-    }
-
-    static inline int is_long_unicode_escape(std::string const &regex, long long pos) {
-        if (pos + 10 <= regex.size() &&
-            regex[pos + 1] == 'U' &&
-            is_hex_digit(regex)
-            ) {
-
-        }
+        return std::stoul(regex.substr(curr_pos, curr_pos + count), nullptr, 16);
     }
 };
