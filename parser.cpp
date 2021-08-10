@@ -24,6 +24,13 @@ struct Node {
 };
 
 
+struct InternalNode : Node {
+};
+
+struct LeafNode : Node {
+};
+
+
 /************************************************
  *                  Char Nodes                  *
  ************************************************/
@@ -32,10 +39,6 @@ struct AsciiCharNode : Node {
     char value;
 
     explicit AsciiCharNode(char value) : value(value) {}
-
-    bool is_operator() override {
-        return false;
-    }
 };
 
 struct CharsRangeNode : Node {
@@ -43,10 +46,6 @@ struct CharsRangeNode : Node {
     char end;
 
     CharsRangeNode(char begin, char end) : begin(begin), end(end) {}
-
-    bool is_operator() override {
-        return false;
-    }
 };
 
 struct EscapeCharNode : Node {
@@ -54,10 +53,6 @@ struct EscapeCharNode : Node {
     char value;
 
     explicit EscapeCharNode(char value) : value(value) {}
-
-    bool is_operator() override {
-        return false;
-    }
 };
 
 struct CharsetNode : Node {
@@ -66,16 +61,36 @@ struct CharsetNode : Node {
 
 
 /************************************************
+ *                 Group nodes                  *
+ ************************************************/
+
+struct GroupNode : InternalNode {
+    Node *operand = nullptr;
+};
+
+struct NumberedCapturingGroupNode : GroupNode {
+    long long number;
+
+    explicit NumberedCapturingGroupNode(long long number) : number(number) {}
+};
+
+struct NamedCapturingGroupNode : GroupNode {
+    std::string name;
+
+    explicit NamedCapturingGroupNode(std::string name) : name(std::move(name)) {}
+};
+
+struct NonCapturingGroupNode : GroupNode {
+};
+
+
+/************************************************
  *               Operator nodes                 *
  ************************************************/
 
-struct OperatorNode : Node {
+struct OperatorNode : InternalNode {
     virtual int arity() = 0;
     virtual int precedence() = 0;
-
-    bool is_operator() override {
-        return true;
-    }
 };
 
 struct UnaryOperatorNode : OperatorNode {
@@ -99,30 +114,13 @@ struct BinaryOperatorNode : OperatorNode {
     }
 };
 
-struct GroupNode : UnaryOperatorNode {
-    int precedence() override {
-        return 0;
-    }
-};
-
-struct NumberedCapturingGroupNode : GroupNode {
-    long long number;
-
-    explicit NumberedCapturingGroupNode(long long number) : number(number) {}
-};
-
-struct NamedCapturingGroupNode : GroupNode {
-    std::string name;
-
-    explicit NamedCapturingGroupNode(std::string name) : name(std::move(name)) {}
-};
-
-struct NonCapturingGroupNode : GroupNode {
-};
-
 struct TildeNode : UnaryOperatorNode {
     int precedence() override {
         return 1;
+    }
+
+    Placement placement() override {
+        return Placement::LEFT;
     }
 };
 
@@ -130,11 +128,19 @@ struct StarNode : UnaryOperatorNode {
     int precedence() override {
         return 2;
     }
+
+    Placement placement() override {
+        return Placement::RIGHT;
+    }
 };
 
 struct PlusNode : UnaryOperatorNode {
     int precedence() override {
         return 2;
+    }
+
+    Placement placement() override {
+        return Placement::RIGHT;
     }
 };
 
@@ -147,20 +153,29 @@ struct RepeatNode : UnaryOperatorNode {
     int precedence() override {
         return 2;
     }
-};
 
-struct AlternateNode : BinaryOperatorNode {
+    Placement placement() override {
+        return Placement::RIGHT;
+    }
 };
 
 struct OptionalNode : UnaryOperatorNode {
     int precedence() override {
         return 2;
     }
+
+    Placement placement() override {
+        return Placement::RIGHT;
+    }
 };
 
 struct ComplementNode : UnaryOperatorNode {
     int precedence() override {
         return 3;
+    }
+
+    Placement placement() override {
+        return Placement::LEFT;
     }
 };
 
@@ -226,6 +241,7 @@ struct Regex {
             Token token = tokens[i];
 
             if (i > 0 && can_insert_concat(tokens[i - 1], tokens[i])) {
+                auto concat = new ConcatNode();
                 // interpret 'concat'
             }
 
