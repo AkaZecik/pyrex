@@ -225,7 +225,7 @@ struct UnionNode : BinaryOperatorNode {
 
 
 /************************************************
- *                    Parser                     *
+ *                    Parser                    *
  ************************************************/
 
 struct Parser {
@@ -238,12 +238,12 @@ struct Parser {
     Node *parse() {
         Tokenizer tokenizer(regex);
         auto tokens = tokenizer.get_all_tokens();
-        int i = 0;
+        int pos = 0;
 
         while (true) {
-            Token token = tokens[i];
+            Token token = tokens[pos];
 
-            if (i > 0 && can_insert_concat(tokens[i - 1], tokens[i])) {
+            if (pos > 0 && can_insert_concat(tokens[pos - 1], tokens[pos])) {
                 interpret_operator(new ConcatNode());
             }
 
@@ -253,12 +253,7 @@ struct Parser {
                 GroupNode *node = nullptr;  // sprawdz jaka to grupa!
                 operators.push_back(node);
             } else if (token.type == TokenType::RPAREN) {
-                while (!operators.empty() &&
-                       operators.back()->type() != InternalNode::Type::GROUP) {
-                    auto op = reinterpret_cast<OperatorNode *>(operators.back());
-                    operators.pop_back();
-                    push_node(op);
-                }
+                drop_operators_until_group();
 
                 if (operators.empty()) {
                     // error!
@@ -279,6 +274,16 @@ struct Parser {
 
             break;
         }
+
+        drop_operators_until_group();
+
+        if (!operators.empty()) {
+            // error!
+        } else if (nodes.size() != 1) {
+            // error!
+        }
+
+        return nodes.back();
     }
 
     static inline bool can_insert_concat(Token before, Token after) {
@@ -353,26 +358,45 @@ struct Parser {
             if (uop->placement() == UnaryOperatorNode::Placement::LEFT) {
                 operators.push_back(op);
             } else {
-                drop_operators_with_higher_precedence(op);
+                drop_operators_with_higher_or_equal_precedence(op->precedence());
                 push_node(op);
             }
         } else {
-            drop_operators_with_higher_precedence(op);
+            drop_operators_with_higher_or_equal_precedence(op->precedence());
             operators.push_back(op);
         }
     };
 
-    void drop_operators_with_higher_precedence(OperatorNode *op) {
+    void drop_operators_with_higher_or_equal_precedence(int precedence) {
         while (!operators.empty() &&
                operators.back()->type() != InternalNode::Type::GROUP) {
-            auto back = reinterpret_cast<OperatorNode *>(operators.back());
+            auto op = reinterpret_cast<OperatorNode *>(operators.back());
 
-            if (back->precedence() >= op->precedence()) {
+            if (op->precedence() >= precedence) {
                 operators.pop_back();
-                push_node(back);
+                push_node(op);
             } else {
                 break;
             }
         }
+    }
+
+    void drop_operators_until_group() {
+        while (!operators.empty() &&
+               operators.back()->type() != InternalNode::Type::GROUP) {
+            auto op = reinterpret_cast<OperatorNode *>(operators.back());
+            operators.pop_back();
+            push_node(op);
+        }
+    }
+
+    int parse_integer() {
+        // determine appropriate type for this function
+        return -1;
+    }
+
+    std::string parse_identifier() {
+        // determine appropriate type for this function
+        return "";
     }
 };
