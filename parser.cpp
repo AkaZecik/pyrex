@@ -5,6 +5,12 @@
 /* Repetition qualifiers (*, +, ?, {m,n}, etc) cannot be directly nested. */
 /* ja pozwalam! */
 
+/* TODO: splitnij ten plik na dwa: parser + regex, regex ma tylko i wylacznie
+ *  wciagnac parser i go odpalic i zapisac sobie wynikowe drzewko.
+ *  Klasa i plik Regex maja obslugiwac logike juz sparsowanego drzewka,
+ *  nie obchodza ich szczegoly parsowania.
+ */
+
 #include <iostream>
 #include <stack>
 #include <utility>
@@ -13,13 +19,11 @@
 #include "tokenizer.cpp"
 
 
-
 /************************************************
- *                    Node                      *
+ *                    Nodes                     *
  ************************************************/
 
 struct Node {
-    virtual bool is_operator() = 0;
     virtual ~Node() = default;
 };
 
@@ -35,27 +39,27 @@ struct LeafNode : Node {
  *                  Char Nodes                  *
  ************************************************/
 
-struct AsciiCharNode : Node {
+struct AsciiCharNode : LeafNode {
     char value;
 
     explicit AsciiCharNode(char value) : value(value) {}
 };
 
-struct CharsRangeNode : Node {
+struct CharsRangeNode : LeafNode {
     char begin;
     char end;
 
     CharsRangeNode(char begin, char end) : begin(begin), end(end) {}
 };
 
-struct EscapeCharNode : Node {
+struct EscapeCharNode : LeafNode {
     /* SpecialCharNode ? */
     char value;
 
     explicit EscapeCharNode(char value) : value(value) {}
 };
 
-struct CharsetNode : Node {
+struct CharsetNode : LeafNode {
     std::vector<Node *> sets;  // maybe differently?
 };
 
@@ -90,11 +94,14 @@ struct NonCapturingGroupNode : GroupNode {
 
 struct OperatorNode : InternalNode {
     virtual int arity() = 0;
+
     virtual int precedence() = 0;
 };
 
 struct UnaryOperatorNode : OperatorNode {
-    enum class Placement {LEFT, RIGHT};
+    enum class Placement {
+        LEFT, RIGHT
+    };
 
     Node *operand = nullptr;
 
@@ -229,11 +236,50 @@ struct Regex {
         std::vector<OperatorNode *> operators;
         int i = 0;
 
-        auto interpret_operator = [&nodes, &operators](OperatorNode *op) {
+        auto push_node = [&nodes](OperatorNode *op) {
+            if (nodes.size() < op->arity()) {
+                // error!
+            }
+
             if (op->arity() == 1) {
-
+                auto _op = reinterpret_cast<UnaryOperatorNode *>(op);
+                Node *operand = nodes.back();
+                nodes.pop_back();
+                _op->operand = operand;
             } else {
+                auto _op = reinterpret_cast<BinaryOperatorNode *>(op);
+                Node *right_operand = nodes.back();
+                nodes.pop_back();
+                Node *left_operand = nodes.back();
+                nodes.pop_back();
+                _op->left_operand = left_operand;
+                _op->right_operand = right_operand;
+            }
 
+            nodes.push_back(op);
+        };
+
+        auto interpret_operator = [&operators, &push_node](OperatorNode *op) {
+            if (op->arity() == 1) {
+                auto _op = reinterpret_cast<UnaryOperatorNode *>(op);
+
+                if (_op->placement() == UnaryOperatorNode::Placement::LEFT) {
+                    operators.push_back(op);
+                } else {
+                    while (!operators.empty() && operators.back()->precedence() >= op->precedence()) {
+                        push_node(operators.back());
+                        operators.pop_back();
+                    }
+
+                    push_node(op);
+                }
+            } else {
+                while (!operators.empty() && operators.back()->precedence() >= op->precedence()) {
+                    push_node(operators.back());
+                    operators.pop_back();
+                }
+
+                operators.push_back(op);
             }
         };
 

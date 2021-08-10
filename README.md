@@ -26,6 +26,7 @@ This project is written in Python 3.9
 
 
 ### Precedence
+
 ```
 0: ()
 1: ~
@@ -37,3 +38,7 @@ This project is written in Python 3.9
 7: :
 8: |
 ```
+
+### Associativity
+
+All binary operators are left-associative.
