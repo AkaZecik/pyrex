@@ -23,3 +23,17 @@ This project is written in Python 3.9
 |            | :                   | xor                   |               |
 |            | |                   | union                 |               |
 |            |                     |                       |               |
+
+
+### Precedence
+```
+0: ()
+1: ~
+2: *, +, ?, {n}, {n,}, {,m}, {n,m}
+3: !
+4: -
+5: "concat"
+6: &
+7: :
+8: |
+```

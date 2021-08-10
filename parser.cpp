@@ -3,6 +3,7 @@
 //
 
 /* Repetition qualifiers (*, +, ?, {m,n}, etc) cannot be directly nested. */
+/* ja pozwalam! */
 
 #include <iostream>
 #include <stack>
@@ -12,60 +13,29 @@
 #include "tokenizer.cpp"
 
 
-union Char {
-    char c;
-    unsigned int i;
-};
 
-
-struct Range {
-    Char start;
-    Char end;
-};
-
-int hehe() {
-    Range range{.start = {.i = 10}, .end = {.c = 'c'}};
-    std::cout << range.start.i << std::endl;
-    return 0;
-}
-
-
-enum class NodeType2 {
-    CHAR,
-    ESCAPE,
-    CHARSET,
-    CONCAT,
-    UNION,
-    INTERSECT,
-    MINUS,
-    XOR,
-    STAR,
-    PLUS,
-    REPEAT,
-    ALTERNATE,
-    COMPLEMENT,
-    OPTIONAL,
-    CASE_INSENSITIVE,
-    NUMBERED_CAPTURE_GROUP,
-    NAMED_CAPTURE_GROUP,
-    NON_CAPTURING_GROUP,
-};
-
+/************************************************
+ *                    Node                      *
+ ************************************************/
 
 struct Node {
-//    NodeType node_type;
-//
-//    NodeType get_node_type() const {
-//        return node_type;
-//    }
-
-    virtual void sth() = 0;
+    virtual bool is_operator() = 0;
+    virtual ~Node() = default;
 };
+
+
+/************************************************
+ *                  Char Nodes                  *
+ ************************************************/
 
 struct AsciiCharNode : Node {
     char value;
 
     explicit AsciiCharNode(char value) : value(value) {}
+
+    bool is_operator() override {
+        return false;
+    }
 };
 
 struct CharsRangeNode : Node {
@@ -73,6 +43,10 @@ struct CharsRangeNode : Node {
     char end;
 
     CharsRangeNode(char begin, char end) : begin(begin), end(end) {}
+
+    bool is_operator() override {
+        return false;
+    }
 };
 
 struct EscapeCharNode : Node {
@@ -80,66 +54,55 @@ struct EscapeCharNode : Node {
     char value;
 
     explicit EscapeCharNode(char value) : value(value) {}
+
+    bool is_operator() override {
+        return false;
+    }
 };
+
+struct CharsetNode : Node {
+    std::vector<Node *> sets;  // maybe differently?
+};
+
+
+/************************************************
+ *               Operator nodes                 *
+ ************************************************/
 
 struct OperatorNode : Node {
+    virtual int arity() = 0;
+    virtual int precedence() = 0;
 
-};
-
-struct CharsetNode : OperatorNode {
-    std::vector<Node *> sets; /* maybe differently */
+    bool is_operator() override {
+        return true;
+    }
 };
 
 struct UnaryOperatorNode : OperatorNode {
+    enum class Placement {LEFT, RIGHT};
+
     Node *operand = nullptr;
+
+    virtual Placement placement() = 0;
+
+    int arity() override {
+        return 1;
+    }
 };
 
 struct BinaryOperatorNode : OperatorNode {
     Node *left_operand = nullptr;
     Node *right_operand = nullptr;
-};
 
-struct ConcatNode : BinaryOperatorNode {
-};
-
-struct UnionNode : BinaryOperatorNode {
-};
-
-struct IntersectNode : BinaryOperatorNode {
-};
-
-struct MinusNode : BinaryOperatorNode {
-};
-
-struct XorNode : BinaryOperatorNode {
-};
-
-struct StarNode : UnaryOperatorNode {
-};
-
-struct PlusNode : UnaryOperatorNode {
-};
-
-struct RepeatNode : UnaryOperatorNode {
-    long long min;
-    long long max;
-
-    RepeatNode(long long min, long long max) : min(min), max(max) {}
-};
-
-struct AlternateNode : BinaryOperatorNode {
-};
-
-struct ComplementNode : UnaryOperatorNode {
-};
-
-struct OptionalNode : UnaryOperatorNode {
-};
-
-struct CaseInsensitiveNode : UnaryOperatorNode {
+    int arity() override {
+        return 2;
+    }
 };
 
 struct GroupNode : UnaryOperatorNode {
+    int precedence() override {
+        return 0;
+    }
 };
 
 struct NumberedCapturingGroupNode : GroupNode {
@@ -157,75 +120,84 @@ struct NamedCapturingGroupNode : GroupNode {
 struct NonCapturingGroupNode : GroupNode {
 };
 
-
-enum class NodeType {
-    NUMBERED_CG,
-    NAMED_CG,
-    NON_CG,
-    CHARSET,
-    CHARSET_COMPLEMENT,
-    RANGE,
-    STAR,
-    PLUS,
-    COMPLEMENT,
-    UNION,
-    INTERSECTION,
-    OPTIONAL,
-    EXACT_REPEAT,
-    MIN_REPEAT,
-    MAX_REPEAT,
-    RANGE_REPEAT,
-    TILDE,
-    PERCENT,
-};
-
-struct NodeRepr {
-    NodeType type;
-    union {
-        char c;
-        unsigned int i;
-        std::string s;
-    } value;
-};
-
-
-int operator_arity(OperatorNode *node) {
-    if (dynamic_cast<UnaryOperatorNode *>(node)) {
+struct TildeNode : UnaryOperatorNode {
+    int precedence() override {
         return 1;
-    } else if (dynamic_cast<BinaryOperatorNode *>(node)) {
+    }
+};
+
+struct StarNode : UnaryOperatorNode {
+    int precedence() override {
         return 2;
-    } else {
-        throw std::runtime_error(
-            "Expected either UnaryOperatorNode or BinaryOperatorNode"
-        );
     }
-}
+};
 
-
-int operator_precedence(OperatorNode *node) {
-    auto ti = std::type_index(typeid(*node));
-
-    if (ti == std::type_index(typeid(NamedCapturingGroupNode)) ||
-        ti == std::type_index(typeid(NumberedCapturingGroupNode)) ||
-        ti == std::type_index(typeid(NonCapturingGroupNode))) {
-        return 0;
+struct PlusNode : UnaryOperatorNode {
+    int precedence() override {
+        return 2;
     }
+};
 
-    if (ti == std::type_index(typeid(CaseInsensitiveNode))) {
-        return 1;
+struct RepeatNode : UnaryOperatorNode {
+    long long min;
+    long long max;
+
+    RepeatNode(long long min, long long max) : min(min), max(max) {}
+
+    int precedence() override {
+        return 2;
     }
+};
 
-    if (ti == std::type_index(typeid()))
+struct AlternateNode : BinaryOperatorNode {
+};
 
-    if (ti == std::type_index(typeid()))
+struct OptionalNode : UnaryOperatorNode {
+    int precedence() override {
+        return 2;
+    }
+};
 
-    if (ti == std::type_index(typeid(GroupNode))) {
+struct ComplementNode : UnaryOperatorNode {
+    int precedence() override {
+        return 3;
+    }
+};
 
-    } else if (ti == std::type_index(typeid(StarNode))) {
-        return 1;
-    } else if (ti == std::type_index(typeid()))
-}
+struct MinusNode : BinaryOperatorNode {
+    int precedence() override {
+        return 4;
+    }
+};
 
+struct ConcatNode : BinaryOperatorNode {
+    int precedence() override {
+        return 5;
+    }
+};
+
+struct IntersectNode : BinaryOperatorNode {
+    int precedence() override {
+        return 6;
+    }
+};
+
+struct XorNode : BinaryOperatorNode {
+    int precedence() override {
+        return 7;
+    }
+};
+
+struct UnionNode : BinaryOperatorNode {
+    int precedence() override {
+        return 8;
+    }
+};
+
+
+/************************************************
+ *                    Regex                     *
+ ************************************************/
 
 struct Regex {
     std::string const &regex;
@@ -239,14 +211,21 @@ struct Regex {
         Tokenizer tokenizer(regex);
         std::vector<Token> tokens = tokenizer.get_all_tokens();
         std::vector<Node *> nodes;
-        std::vector<Node *> operators;
+        std::vector<OperatorNode *> operators;
         int i = 0;
+
+        auto interpret_operator = [&nodes, &operators](OperatorNode *op) {
+            if (op->arity() == 1) {
+
+            } else {
+
+            }
+        };
 
         while (true) {
             Token token = tokens[i];
 
-            if (i > 0 && before_concat(tokens[i - 1]) && after_concat(tokens[i])) {
-
+            if (i > 0 && can_insert_concat(tokens[i - 1], tokens[i])) {
                 // interpret 'concat'
             }
 
@@ -269,6 +248,10 @@ struct Regex {
 
                 break;
         }
+    }
+
+    static inline bool can_insert_concat(Token before, Token after) {
+        return before_concat(before) && after_concat(after);
     }
 
     static inline bool before_concat(Token token) {
