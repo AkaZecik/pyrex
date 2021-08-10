@@ -3,15 +3,30 @@
 //
 
 /* Repetition qualifiers (*, +, ?, {m,n}, etc) cannot be directly nested. */
-/*
- * TODO:
- *  - handle all ASCII (not just printable ones?). Watch out for sign of c++ char.
- */
 
 #include <iostream>
 #include <stack>
 #include <utility>
 #include <vector>
+#include "tokenizer.cpp"
+
+
+union Char {
+    char c;
+    unsigned int i;
+};
+
+
+struct Range {
+    Char start;
+    Char end;
+};
+
+int hehe() {
+    Range range{.start = {.i = 10}, .end = {.c = 'c'}};
+    std::cout << range.start.i << std::endl;
+    return 0;
+}
 
 
 enum class NodeType {
@@ -165,28 +180,80 @@ inline bool after_concat(char c) {
 
 inline bool can_insert_concat(char prev, char curr) {
     //
-    return (prev == ')' || prev == ']' || prev == '}' || prev == '*' || prev == '+' || prev == '?') && (curr == '(' || curr == '[' || curr == '!' || curr == '~' || );
+    return (prev == ')' || prev == ']' || prev == '}' || prev == '*' || prev == '+' || prev == '?') &&
+           (curr == '(' || curr == '[' || curr == '!' || curr == '~' || );
 }
 
 
 struct Regex {
-    Node *regex;
+    std::string const &regex;
+    Node *tree;
 
-    explicit Regex(std::string const &regex) {
-        this->regex = parse(regex);
+    explicit Regex(std::string const &regex) : regex(regex) {
+        tree = parse(regex);
     }
 
     static Node *parse(std::string const &regex) {
-        bool in_char_set = false;
+        Tokenizer tokenizer(regex);
+        std::vector<Token> tokens = tokenizer.get_all_tokens();
         std::vector<Node *> nodes;
         std::vector<Node *> operators;
+        int i = 0;
 
+        while (true) {
+            Token token = tokens[i];
 
-        for (int i = 0; i < regex.size();) {
-            if (i > 0 && (regex[i - 1]))
+            if (i > 0 && before_concat(tokens[i - 1]) && after_concat(tokens[i])) {
+                // interpret 'concat'
+            }
+
+            if (token.type == TokenType::LBRACK) {
+                // sparsuj charset
+            } else if (token.type == TokenType::LPAREN) {
+                // sprawdz jaka to grupa
+                // wrzuc na stos
+            } else if (token.type == TokenType::RPAREN) {
+                // zdejmuj operatory, az napotkasz lewy nawias
+            } else if (token.type == TokenType::LITERAL) {
+
+            } else if (token.type == TokenType::BYTE) {
+
+            } else if (token.type == TokenType::SHORT_UNICODE) {
+
+            } else if (token.type == TokenType::LONG_UNICODE) {
+
+            } else if (token.type == TokenType::)
+
+            break;
         }
+    }
 
-        return nullptr;
+    static inline bool before_concat(Token token) {
+        return (
+            token.type == TokenType::RPAREN ||
+            token.type == TokenType::RBRACK ||
+            token.type == TokenType::RCURLY ||
+            token.type == TokenType::STAR ||
+            token.type == TokenType::PLUS ||
+            token.type == TokenType::QMARK ||
+            token.type == TokenType::LITERAL ||
+            token.type == TokenType::DOT ||
+            token.type == TokenType::SHORT_UNICODE ||
+            token.type == TokenType::LONG_UNICODE ||
+            token.type == TokenType::ESCAPE // check if special or not
+        );
+    }
+
+    static inline bool after_concat(Token token) {
+        return (
+            token.type == TokenType::LPAREN ||
+            token.type == TokenType::LBRACK ||
+            token.type == TokenType::EMARK ||
+            token.type == TokenType::TILDE ||
+            token.type == TokenType::LITERAL ||
+            token.type == TokenType::DOT ||
+            token.type == TokenType::ESCAPE // check if special or not
+        );
     }
 };
 

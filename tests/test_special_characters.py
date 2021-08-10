@@ -63,3 +63,9 @@ class TestSpecialCharacters(unittest.TestCase):
     def test_empty_language(self) -> None:
         # \#
         pass
+
+    def test_empty_string(self) -> None:
+        # TODO: do we want that?
+        #  is "abc(\e)" equivalent to "abc()" or "abc()?" or "abc(\e)?"
+        # \e
+        pass

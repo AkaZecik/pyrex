@@ -46,6 +46,7 @@ enum class TokenType {
     END, // end of tokens
 };
 
+/* TODO: add "start" and "end" values */
 union TokenValue {
     char c;
     unsigned int i;
