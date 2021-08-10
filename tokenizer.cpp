@@ -37,6 +37,7 @@ enum class TokenType {
     TILDE, // ~
     UNION, // |
     INTERSECTION, // &
+    DOT, // .
     ESCAPE, // \char
     BYTE, // \xNN
     SHORT_UNICODE, // \uNNNN
@@ -128,6 +129,8 @@ struct Tokenizer {
                 return Token(TokenType::UNION);
             case '&':
                 return Token(TokenType::INTERSECTION);
+            case '.':
+                return Token(TokenType::DOT);
             case '\\':
                 return tokenize_escape();
             default:
@@ -173,7 +176,7 @@ struct Tokenizer {
                 return {TokenType::LONG_UNICODE, (unsigned int) value};
             }
             default:
-                return {TokenType::LITERAL, c};
+                return {TokenType::ESCAPE, c};
         }
     }
 
