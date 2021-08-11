@@ -3,7 +3,6 @@
 //
 
 #include <iostream>
-#include <utility>
 #include <vector>
 #include <set>
 #include <unordered_map>
@@ -35,12 +34,12 @@ struct Node {
 
 Node *build_tree(std::vector<char> const &onp) {
     std::vector<Node *> results;
-    int id = 1;
+    int id = 0;
 
     for (char c : onp) {
         if (c == '*' || c == '?') {
             if (results.empty()) {
-                throw std::runtime_error("star applied to nothing!");
+                throw std::runtime_error("star/qmark applied to nothing!");
             }
 
             auto back = results.back();
@@ -81,7 +80,7 @@ Node *build_tree(std::vector<char> const &onp) {
 
 
 bool before_concat(char c) {
-    return c == ')' || c == '*' || c == '?' || 'a' <= c && c <= 'z';
+    return c == ')' || c == '*' || c == '?' || 'a' <= c && c <= 'z' || c == '#';
 }
 
 bool after_concat(char c) {
@@ -161,7 +160,6 @@ std::vector<char> get_onp(std::string const &regex) {
 }
 
 Node *parse(std::string const &regex) {
-    verify_regex(regex);
     auto onp = get_onp(regex);
     auto result = build_tree(onp);
     return result;
@@ -326,6 +324,7 @@ int main() {
             std::string regex;
             std::cin >> regex;
             verify_regex(regex);
+            regex = std::string("#(").append(regex).append(")");
             auto onp = get_onp(regex);
 
             for (char c : onp) {
