@@ -9,13 +9,13 @@
 #include <unordered_map>
 
 /*
- * 0 - *
+ * 0 - *, ?
  * 1 - concat
  * 2 - union
  */
 
 enum class NodeType {
-    STAR, UNION, CONCAT, EMPTY, CHAR
+    STAR, QMARK, UNION, CONCAT, EMPTY, CHAR
 };
 
 struct Node {
@@ -38,14 +38,15 @@ Node *build_tree(std::vector<char> const &onp) {
     int id = 1;
 
     for (char c : onp) {
-        if (c == '*') {
+        if (c == '*' || c == '?') {
             if (results.empty()) {
                 throw std::runtime_error("star applied to nothing!");
             }
 
             auto back = results.back();
             results.pop_back();
-            results.push_back(new Node{NodeType::STAR, {.operand = back}});
+            results.push_back(new Node{(c == '*' ? NodeType::STAR : NodeType::QMARK),
+                                       {.operand = back}});
         } else if (c == '.' || c == '|') {
             if (results.size() < 2) {
                 throw std::runtime_error("not enough operands for concat!");
@@ -80,7 +81,7 @@ Node *build_tree(std::vector<char> const &onp) {
 
 
 bool before_concat(char c) {
-    return c == ')' || c == '*' || 'a' <= c && c <= 'z';
+    return c == ')' || c == '*' || c == '?' || 'a' <= c && c <= 'z';
 }
 
 bool after_concat(char c) {
@@ -93,8 +94,11 @@ bool can_insert_concat(char before, char after) {
 
 void verify_regex(std::string const &regex) {
     for (char c : regex) {
-        if (c != '(' && c != ')' && c != '*' && c != '|' && !('a' <= c && c <= 'z')) {
-            throw std::runtime_error("Your regex contains invalid characters!");
+        if (c != '(' && c != ')' && c != '*' && c != '?' && c != '|' &&
+            !('a' <= c && c <= 'z')) {
+            throw std::runtime_error(
+                "Your regex contains invalid characters! \"" + std::to_string(c) +
+                "\"");
         }
     }
 }
@@ -106,8 +110,7 @@ std::vector<char> get_onp(std::string const &regex) {
 
     for (int i = 0; i < regex.size(); ++i) {
         if (i > 0 && can_insert_concat(regex[i - 1], regex[i])) {
-            while (!operators.empty() &&
-                   (operators.back() == '*' || operators.back() == '.')) {
+            while (!operators.empty() && operators.back() == '.') {
                 results.push_back(operators.back());
                 operators.pop_back();
             }
@@ -165,19 +168,23 @@ Node *parse(std::string const &regex) {
 }
 
 bool nullable(Node *node) {
-    if (node->type == NodeType::STAR || node->type == NodeType::EMPTY) {
+    if (node->type == NodeType::STAR ||
+        node->type == NodeType::EMPTY ||
+        node->type == NodeType::QMARK) {
         return true;
     } else if (node->type == NodeType::CONCAT) {
-        return nullable(node->value.children.left_operand) && nullable(node->value.children.right_operand);
+        return nullable(node->value.children.left_operand) &&
+               nullable(node->value.children.right_operand);
     } else if (node->type == NodeType::UNION) {
-        return nullable(node->value.children.left_operand) || nullable(node->value.children.right_operand);
+        return nullable(node->value.children.left_operand) ||
+               nullable(node->value.children.right_operand);
     } else {
         return false;
     }
 }
 
 std::set<int> first_pos(Node *node) {
-    if (node->type == NodeType::STAR) {
+    if (node->type == NodeType::STAR || node->type == NodeType::QMARK) {
         return first_pos(node->value.operand);
     } else if (node->type == NodeType::CONCAT) {
         std::set<int> result;
@@ -206,7 +213,7 @@ std::set<int> first_pos(Node *node) {
 }
 
 std::set<int> last_pos(Node *node) {
-    if (node->type == NodeType::STAR) {
+    if (node->type == NodeType::STAR || node->type == NodeType::QMARK) {
         return last_pos(node->value.operand);
     } else if (node->type == NodeType::CONCAT) {
         std::set<int> result;
@@ -236,37 +243,46 @@ std::set<int> last_pos(Node *node) {
 
 void print(std::set<int> const &set) {
     std::cout << "{";
+    int c = 0;
 
     for (int i : set) {
-        std::cout << i << " ";
+        std::cout << i;
+
+        if (c < set.size() - 1) {
+            std::cout << " ";
+        }
+        ++c;
     }
+
+    std::cout << "}";
 }
 
 void dfs(Node *node) {
     if (node->type == NodeType::EMPTY) {
-        std::cout << "e" << std::endl;
+        std::cout << "e";
     } else if (node->type == NodeType::CHAR) {
-        std::cout << node->value.leaf.id << "" << std::endl;
+        std::cout << node->value.leaf.id << "";
     } else if (node->type == NodeType::STAR) {
         dfs(node->value.operand);
-        std::cout << "*" << std::endl;
+        std::cout << "*";
+    } else if (node->type == NodeType::QMARK) {
+        dfs(node->value.operand);
+        std::cout << "?";
     } else if (node->type == NodeType::CONCAT) {
         dfs(node->value.children.left_operand);
         dfs(node->value.children.right_operand);
-        std::cout << "." << std::endl;
+        std::cout << ".";
     } else {
         dfs(node->value.children.left_operand);
         dfs(node->value.children.right_operand);
-        std::cout << "|" << std::endl;
+        std::cout << "|";
     }
 
-    std::cout << "  nullable: " << nullable(node) << std::endl;
-    std::cout << "  first_pos: ";
+    std::cout << " --- nullable: " << nullable(node) << ",\tfirst_pos: ";
     print(first_pos(node));
-    std::cout << "}" << std::endl;
-    std::cout << "  last_pos: ";
+    std::cout << ",\tlast_pos: ";
     print(last_pos(node));
-    std::cout << "}" << std::endl;
+    std::cout << std::endl;
 }
 
 void next_pos_internal(Node *node, std::unordered_map<int, std::set<int>> &map) {
@@ -278,6 +294,8 @@ void next_pos_internal(Node *node, std::unordered_map<int, std::set<int>> &map) 
                 map[i].emplace(j);
             }
         }
+    } else if (node->type == NodeType::QMARK) {
+        next_pos_internal(node->value.operand, map);
     } else if (node->type == NodeType::CONCAT) {
         next_pos_internal(node->value.children.left_operand, map);
         next_pos_internal(node->value.children.right_operand, map);
@@ -300,29 +318,42 @@ auto next_pos(Node *node) {
 }
 
 int main() {
-    std::cout << std::boolalpha;
-    std::string regex;
-    std::cin >> regex;
-    auto onp = get_onp(regex);
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "EndlessLoop"
+    while (true) {
+        try {
+            std::cout << std::boolalpha;
+            std::string regex;
+            std::cin >> regex;
+            verify_regex(regex);
+            auto onp = get_onp(regex);
 
-    for (char c : onp) {
-        std::cout << c << " ";
-    }
+            for (char c : onp) {
+                std::cout << c << " ";
+            }
 
-    std::cout << std::endl;
+            std::cout << std::endl;
+            dfs(parse(regex));
 
-    for (int i : first_pos(parse(regex))) {
-        std::cout << i << " ";
-    }
+            for (const auto &pair : next_pos(parse(regex))) {
+                std::cout << pair.first << " -> ";
 
-    std::cout << std::endl;
-    dfs(parse(regex));
+                for (int next : pair.second) {
+                    std::cout << next << ", ";
+                }
 
-    for (const auto& pair : next_pos(parse(regex))) {
-        for (int next : pair.second) {
-            std::cout << pair.first << " " << next << std::endl;
+                std::cout << std::endl;
+            }
+
+        } catch (std::runtime_error &e) {
+            std::cout << "\nERROR: " << e.what() << std::endl;
         }
+
+        std::cout
+            << "-----------------------------------------------------------------------------"
+            << std::endl;
     }
+#pragma clang diagnostic pop
 }
 
 /* TODO: dopisac # */
