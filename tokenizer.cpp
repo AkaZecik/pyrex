@@ -58,7 +58,7 @@ struct Tokenizer {
             case '*': return Token(TokenType::STAR);
             case '|': return Token(TokenType::UNION);
             case '?': return Token(TokenType::QMARK);
-            case '\'': return parse_escape();
+            case '\\': return parse_escape();
             default: return {TokenType::CHAR, c};
         }
     }
@@ -92,7 +92,7 @@ struct Tokenizer {
             throw std::runtime_error("Premature end of regex");
         }
 
-        int value = std::stoi(regex.substr(curr_pos, curr_pos + 2), nullptr, 16);
+        int value = std::stoi(regex.substr(curr_pos, 2), nullptr, 16);
         curr_pos += 2;
         return static_cast<char>(value);
     }

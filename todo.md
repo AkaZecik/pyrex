@@ -17,3 +17,11 @@ Literal escapes:
 * \*
 * \|
 * \?
+  LPAREN,
+  RPAREN,
+  STAR,
+  UNION,
+  QMARK,
+  CHAR,
+  END,
+  };
