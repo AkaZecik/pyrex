@@ -6,7 +6,7 @@
 
 
 #include <string>
-#include "parser.cpp"
+#include "general_parser.cpp"
 
 /************************************************
  *                    Parser                     *
