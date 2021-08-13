@@ -2,8 +2,19 @@
 // Created by bercik on 13.08.2021.
 //
 
+enum NodeType {
+    CHAR,
+    GROUP,
+    STAR,
+    QMARK,
+    CONCAT,
+    UNION,
+};
+
 
 struct Node {
+    virtual NodeType node_type() = 0;
+
     virtual ~Node() = default;
 };
 
@@ -14,14 +25,19 @@ struct CharNode : LeafNode {
     char value;
 
     explicit CharNode(char value) : value(value) {}
+
+    NodeType node_type() override {
+        return NodeType::CHAR;
+    }
 };
 
 struct InternalNode : Node {
     enum class Type {
         GROUP, OPERATOR,
-        };
+    };
 
     virtual int arity() = 0;
+
     virtual Type internal_node_type() = 0;
 };
 
@@ -30,6 +46,10 @@ struct Group : InternalNode {
     Node *operand = nullptr;
 
     explicit Group(int number) : number(number) {}
+
+    NodeType node_type() override {
+        return NodeType::GROUP;
+    }
 
     InternalNode::Type internal_node_type() override {
         return InternalNode::Type::GROUP;
@@ -41,13 +61,7 @@ struct Group : InternalNode {
 };
 
 struct Operator : InternalNode {
-    enum class Type {
-        STAR, QMARK, CONCAT, UNION,
-        };
-
     virtual int precedence() = 0;
-
-    virtual Type operator_type() = 0;
 
     InternalNode::Type internal_node_type() override {
         return InternalNode::Type::OPERATOR;
@@ -72,41 +86,41 @@ struct BinaryOperator : Operator {
 };
 
 struct StarNode : UnaryOperator {
-    int precedence() override {
-        return 1;
+    NodeType node_type() override {
+        return NodeType::STAR;
     }
 
-    Operator::Type operator_type() override {
-        return Operator::Type::STAR;
+    int precedence() override {
+        return 1;
     }
 };
 
 struct QMarkNode : UnaryOperator {
-    int precedence() override {
-        return 1;
+    NodeType node_type() override {
+        return NodeType::QMARK;
     }
 
-    Operator::Type operator_type() override {
-        return Operator::Type::QMARK;
+    int precedence() override {
+        return 1;
     }
 };
 
 struct ConcatNode : BinaryOperator {
-    int precedence() override {
-        return 2;
+    NodeType node_type() override {
+        return NodeType::CONCAT;
     }
 
-    Operator::Type operator_type() override {
-        return Operator::Type::CONCAT;
+    int precedence() override {
+        return 2;
     }
 };
 
 struct UnionNode : BinaryOperator {
-    int precedence() override {
-        return 3;
+    NodeType node_type() override {
+        return NodeType::UNION;
     }
 
-    Operator::Type operator_type() override {
-        return Operator::Type::UNION;
+    int precedence() override {
+        return 3;
     }
 };
