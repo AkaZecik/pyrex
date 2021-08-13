@@ -164,22 +164,6 @@ struct Parser {
             stack.pop_back();
             push_node(op);
         }
-
-//        if (stack.empty()) {
-//            throw std::runtime_error("Too many closing parenthesis");
-//        }
-//
-//        InternalNode *group = stack.back();
-//        stack.pop_back();
-//        push_node(group);
-    }
-
-    void drop_nodes_until_end() {
-        while (!stack.empty()) {
-            InternalNode *node = stack.back();
-            stack.pop_back();
-            push_node(node);
-        }
     }
 };
 
