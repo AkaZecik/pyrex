@@ -2,6 +2,9 @@
 // Created by bercik on 13.08.2021.
 //
 
+#ifndef PARSER_CPP
+#define PARSER_CPP
+
 #include <string>
 #include <utility>
 #include "tokenizer.cpp"
@@ -29,7 +32,7 @@ struct Parser {
         }
     }
 
-    Node *parse(std::string const &regex) {
+    Node *parse() {
         while (true) {
             if (curr_pos > 0 &&
                 can_insert_concat(tokens[curr_pos - 1], tokens[curr_pos])) {
@@ -37,12 +40,21 @@ struct Parser {
             }
 
             Token token = tokens[curr_pos];
+            curr_pos += 1;
 
             if (token.type == TokenType::LPAREN) {
                 stack.push_back(new Group(group_id));
                 group_id += 1;
             } else if (token.type == TokenType::RPAREN) {
                 drop_operators_until_group();
+
+                if (stack.empty()) {
+                    throw std::runtime_error("Too many closing parenthesis");
+                }
+
+                InternalNode *group = stack.back();
+                stack.pop_back();
+                push_node(group);
             } else if (token.type == TokenType::STAR) {
                 interpret_operator(new StarNode());
             } else if (token.type == TokenType::QMARK) {
@@ -52,11 +64,17 @@ struct Parser {
             } else if (token.type == TokenType::CHAR) {
                 results.push_back(new CharNode(token.value));
             } else if (token.type == TokenType::END) {
-                drop_nodes_until_end();
+                drop_operators_until_group();
+
+                if (!stack.empty()) {
+                    throw std::runtime_error("Missing closing parenthesis");
+                }
 
                 if (results.size() > 1) {
                     throw std::runtime_error("Not enough operators");  // TODO: improve
                 }
+
+                return results.back();
             }
         }
     }
@@ -102,9 +120,9 @@ struct Parser {
                 uop->operand = operand;
             } else {
                 auto bop = reinterpret_cast<BinaryOperator *>(op);
-                Node *left_operand = results.back();
-                results.pop_back();
                 Node *right_operand = results.back();
+                results.pop_back();
+                Node *left_operand = results.back();
                 results.pop_back();
                 bop->left_operand = left_operand;
                 bop->right_operand = right_operand;
@@ -147,13 +165,13 @@ struct Parser {
             push_node(op);
         }
 
-        if (stack.empty()) {
-            throw std::runtime_error("Too many closing parenthesis");
-        }
-
-        InternalNode *group = stack.back();
-        stack.pop_back();
-        push_node(group);
+//        if (stack.empty()) {
+//            throw std::runtime_error("Too many closing parenthesis");
+//        }
+//
+//        InternalNode *group = stack.back();
+//        stack.pop_back();
+//        push_node(group);
     }
 
     void drop_nodes_until_end() {
@@ -164,3 +182,5 @@ struct Parser {
         }
     }
 };
+
+#endif // PARSER_CPP

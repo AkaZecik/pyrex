@@ -2,6 +2,9 @@
 // Created by bercik on 13.08.2021.
 //
 
+#ifndef AST_CPP
+#define AST_CPP
+
 #include <string>
 
 enum NodeKind {
@@ -59,7 +62,8 @@ struct CharNode : LeafNode {
                 return "\\?";
             default:
                 if (' ' <= value && value <= '~') {
-                    return std::to_string(value);
+                    std::string hehe(1, value);
+                    return std::string(1, value);
                 } else {
                     // TODO: assumes size of char is 1 byte
                     static char const *const hex = "0123456789abcdef";
@@ -199,3 +203,5 @@ struct UnionNode : BinaryOperator {
         return left_operand->to_string().append("|").append(right_operand->to_string());
     }
 };
+
+#endif // AST_CPP
