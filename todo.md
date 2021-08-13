@@ -6,6 +6,11 @@
 * Add handling for edge cases
 * Add handling for \x00
 * Improve interface of parser/tokenizer i.e. determine what should happen if you call them twice or sth like that
+* Split parser.cpp into ast.cpp and parser.cpp
+* Wrap std::vector<Node *> results into a struct
+* Wrap std::vector<InternalNode *> stack into a struct
+* Create drop_operators_until_end (operators/groups);
+* Count nodes constructed/deconstructed for debugging
 
 Literal escapes:
 * \n

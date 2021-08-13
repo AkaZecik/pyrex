@@ -14,7 +14,9 @@ struct LeafNode : Node {
 };
 
 struct CharNode : LeafNode {
-    char c;
+    char value;
+
+    explicit CharNode(char value) : value(value) {}
 };
 
 struct InternalNode : Node {
@@ -22,14 +24,22 @@ struct InternalNode : Node {
         GROUP, OPERATOR,
     };
 
+    virtual int arity() = 0;
     virtual Type internal_node_type() = 0;
 };
 
 struct Group : InternalNode {
     int number;
+    Node *operand = nullptr;
+
+    explicit Group(int number) : number(number) {}
 
     InternalNode::Type internal_node_type() override {
         return InternalNode::Type::GROUP;
+    }
+
+    int arity() override {
+        return 1;
     }
 };
 
@@ -37,8 +47,6 @@ struct Operator : InternalNode {
     enum class Type {
         STAR, QMARK, CONCAT, UNION,
     };
-
-    virtual int arity() = 0;
 
     virtual int precedence() = 0;
 
@@ -110,6 +118,8 @@ struct Parser {
     std::vector<Token> tokens;
     std::vector<Node *> results;
     std::vector<InternalNode *> stack;
+    long long curr_pos = 0;
+    int group_id = 1;
 
     explicit Parser(std::string regex) {
         Tokenizer tokenizer(std::move(regex));
@@ -127,18 +137,35 @@ struct Parser {
     }
 
     Node *parse(std::string const &regex) {
-        long long curr_pos = 0;
-
         while (true) {
             if (curr_pos > 0 &&
                 can_insert_concat(tokens[curr_pos - 1], tokens[curr_pos])) {
-                interpret_operator(new ConcatNode());
+                interpret_operator(new ConcatNode());  // might throw, deconstruct it!
             }
 
-            break;
-        }
+            Token token = tokens[curr_pos];
 
-        return nullptr;
+            if (token.type == TokenType::LPAREN) {
+                stack.push_back(new Group(group_id));
+                group_id += 1;
+            } else if (token.type == TokenType::RPAREN) {
+                drop_operators_until_group();
+            } else if (token.type == TokenType::STAR) {
+                interpret_operator(new StarNode());
+            } else if (token.type == TokenType::QMARK) {
+                interpret_operator(new QMarkNode());
+            } else if (token.type == TokenType::UNION) {
+                interpret_operator(new UnionNode());
+            } else if (token.type == TokenType::CHAR) {
+                results.push_back(new CharNode(token.value));
+            } else if (token.type == TokenType::END) {
+                drop_nodes_until_end();
+
+                if (results.size() > 1) {
+                    throw std::runtime_error("Not enough operators");  // TODO: improve
+                }
+            }
+        }
     }
 
     static bool can_insert_concat(Token before, Token after) {
@@ -161,10 +188,40 @@ struct Parser {
         );
     }
 
-    void push_node(Node *node) {
+    void push_node(InternalNode *node) {
+        if (node->arity() > results.size()) {
+            delete node;
+            throw std::runtime_error("Too little operands!");  // TODO: improve
+        }
 
+        if (node->internal_node_type() == InternalNode::Type::GROUP) {
+            auto group = reinterpret_cast<Group *>(node);
+            Node *operand = results.back();
+            results.pop_back();
+            group->operand = operand;
+        } else {
+            auto op = reinterpret_cast<Operator *>(node);
+
+            if (op->arity() == 1) {
+                auto uop = reinterpret_cast<UnaryOperator *>(op);
+                Node *operand = results.back();
+                results.pop_back();
+                uop->operand = operand;
+            } else {
+                auto bop = reinterpret_cast<BinaryOperator *>(op);
+                Node *left_operand = results.back();
+                results.pop_back();
+                Node *right_operand = results.back();
+                results.pop_back();
+                bop->left_operand = left_operand;
+                bop->right_operand = right_operand;
+            }
+        }
+
+        results.push_back(node);
     }
 
+    // assumes unary operators are only right-hand-side unary operators
     void interpret_operator(Operator *op) {
         drop_operators_precedence(op->precedence());
 
@@ -191,10 +248,26 @@ struct Parser {
 
     void drop_operators_until_group() {
         while (!stack.empty() &&
-               stack.back()->internal_node_type() != InternalNode::Type::GROUP) {
+        stack.back()->internal_node_type() != InternalNode::Type::GROUP) {
             auto op = reinterpret_cast<Operator *>(stack.back());
             stack.pop_back();
             push_node(op);
+        }
+
+        if (stack.empty()) {
+            throw std::runtime_error("Too many closing parenthesis");
+        }
+
+        InternalNode *group = stack.back();
+        stack.pop_back();
+        push_node(group);
+    }
+
+    void drop_nodes_until_end() {
+        while (!stack.empty()) {
+            InternalNode *node = stack.back();
+            stack.pop_back();
+            push_node(node);
         }
     }
 };
