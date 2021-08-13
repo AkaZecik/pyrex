@@ -22,6 +22,7 @@ struct Token {
     char value{};
 
     explicit Token(TokenType type) : type(type) {}
+
     Token(TokenType type, char value) : type(type), value(value) {}
 };
 
@@ -53,13 +54,20 @@ struct Tokenizer {
         curr_pos += 1;
 
         switch (c) {
-            case '(': return Token(TokenType::LPAREN);
-            case ')': return Token(TokenType::RPAREN);
-            case '*': return Token(TokenType::STAR);
-            case '|': return Token(TokenType::UNION);
-            case '?': return Token(TokenType::QMARK);
-            case '\\': return parse_escape();
-            default: return {TokenType::CHAR, c};
+            case '(':
+                return Token(TokenType::LPAREN);
+            case ')':
+                return Token(TokenType::RPAREN);
+            case '*':
+                return Token(TokenType::STAR);
+            case '|':
+                return Token(TokenType::UNION);
+            case '?':
+                return Token(TokenType::QMARK);
+            case '\\':
+                return parse_escape();
+            default:
+                return {TokenType::CHAR, c};
         }
     }
 
@@ -72,18 +80,30 @@ struct Tokenizer {
         curr_pos += 1;
 
         switch (c) {
-            case 'n': return {TokenType::CHAR, '\n'};
-            case 'r': return {TokenType::CHAR, '\r'};
-            case 'f': return {TokenType::CHAR, '\f'};
-            case 't': return {TokenType::CHAR, '\t'};
-            case '\\': return {TokenType::CHAR, '\\'};
-            case '(': return {TokenType::CHAR, '('};
-            case ')': return {TokenType::CHAR, ')'};
-            case '*': return {TokenType::CHAR, '*'};
-            case '|': return {TokenType::CHAR, '|'};
-            case '?': return {TokenType::CHAR, '?'};
-            case 'x': return {TokenType::CHAR, parse_hex()};
-            default: throw std::runtime_error("Invalid escape");
+            case 'n':
+                return {TokenType::CHAR, '\n'};
+            case 'r':
+                return {TokenType::CHAR, '\r'};
+            case 'f':
+                return {TokenType::CHAR, '\f'};
+            case 't':
+                return {TokenType::CHAR, '\t'};
+            case '\\':
+                return {TokenType::CHAR, '\\'};
+            case '(':
+                return {TokenType::CHAR, '('};
+            case ')':
+                return {TokenType::CHAR, ')'};
+            case '*':
+                return {TokenType::CHAR, '*'};
+            case '|':
+                return {TokenType::CHAR, '|'};
+            case '?':
+                return {TokenType::CHAR, '?'};
+            case 'x':
+                return {TokenType::CHAR, parse_hex()};
+            default:
+                throw std::runtime_error("Invalid escape");
         }
     }
 

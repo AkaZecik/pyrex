@@ -15,14 +15,23 @@ enum NodeKind {
 
 
 struct Node {
+    enum class Type {
+        LEAF, INTERNAL,
+    };
+
     virtual ~Node() = default;
 
     virtual NodeKind node_kind() = 0;
+
+    virtual Type node_type() = 0;
 
     virtual std::string to_string() = 0;
 };
 
 struct LeafNode : Node {
+    Type node_type() override {
+        return Node::Type::LEAF;
+    }
 };
 
 struct CharNode : LeafNode {
@@ -32,6 +41,43 @@ struct CharNode : LeafNode {
 
     NodeKind node_kind() override {
         return NodeKind::CHAR;
+    }
+
+    std::string to_string() override {
+        switch (value) {
+            case '\n':
+                return "\\n";
+            case '\r':
+                return "\\r";
+            case '\f':
+                return "\\f";
+            case '\t':
+                return "\\t";
+            case '\\':
+                return "\\\\";
+            case '(':
+                return "\\(";
+            case ')':
+                return "\\)";
+            case '*':
+                return "\\*";
+            case '|':
+                return "\\|";
+            case '?':
+                return "\\?";
+            default:
+                if (' ' <= value && value <= '~') {
+                    return std::to_string(value);
+                } else {
+                    // TODO: assumes size of char is 1 byte
+                    static char const *const hex = "0123456789abcdef";
+                    auto n = static_cast<unsigned char>(value);
+                    std::string result = "\\x00";
+                    result[2] = hex[n / 16];
+                    result[3] = hex[n % 16];
+                    return result;
+                }
+        }
     }
 };
 
@@ -65,6 +111,12 @@ struct Group : InternalNode {
 
     int arity() override {
         return 1;
+    }
+
+    std::string to_string() override {
+        if (operand->node_kind() == NodeKind::CHAR) {
+            //
+        }
     }
 };
 

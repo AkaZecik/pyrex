@@ -11,6 +11,7 @@
 * Wrap std::vector<InternalNode *> stack into a struct
 * Create drop_operators_until_end (operators/groups);
 * Count nodes constructed/deconstructed for debugging
+* Verify correct usage of "char" type (can it have more than 1 byte?)
 
 Literal escapes:
 * \n
