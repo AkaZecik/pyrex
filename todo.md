@@ -12,6 +12,7 @@
 * Create drop_operators_until_end (operators/groups);
 * Count nodes constructed/deconstructed for debugging
 * Verify correct usage of "char" type (can it have more than 1 byte?)
+* to_string works only under the assumption that AST was constructed with a parser+tokenizer
 
 Literal escapes:
 * \n

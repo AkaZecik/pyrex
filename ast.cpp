@@ -15,23 +15,15 @@ enum NodeKind {
 
 
 struct Node {
-    enum class Type {
-        LEAF, INTERNAL,
-    };
 
     virtual ~Node() = default;
 
     virtual NodeKind node_kind() = 0;
 
-    virtual Type node_type() = 0;
-
     virtual std::string to_string() = 0;
 };
 
 struct LeafNode : Node {
-    Type node_type() override {
-        return Node::Type::LEAF;
-    }
 };
 
 struct CharNode : LeafNode {
@@ -114,9 +106,7 @@ struct Group : InternalNode {
     }
 
     std::string to_string() override {
-        if (operand->node_kind() == NodeKind::CHAR) {
-            //
-        }
+        return std::string("(").append(operand->to_string()).append(")");
     }
 };
 
@@ -162,6 +152,10 @@ struct StarNode : UnaryOperator {
     int precedence() override {
         return 1;
     }
+
+    std::string to_string() override {
+        return operand->to_string().append("*");
+    }
 };
 
 struct QMarkNode : UnaryOperator {
@@ -171,6 +165,10 @@ struct QMarkNode : UnaryOperator {
 
     int precedence() override {
         return 1;
+    }
+
+    std::string to_string() override {
+        return operand->to_string().append("?");
     }
 };
 
@@ -182,6 +180,10 @@ struct ConcatNode : BinaryOperator {
     int precedence() override {
         return 2;
     }
+
+    std::string to_string() override {
+        return left_operand->to_string().append(right_operand->to_string());
+    }
 };
 
 struct UnionNode : BinaryOperator {
@@ -191,5 +193,9 @@ struct UnionNode : BinaryOperator {
 
     int precedence() override {
         return 3;
+    }
+
+    std::string to_string() override {
+        return left_operand->to_string().append("|").append(right_operand->to_string());
     }
 };
