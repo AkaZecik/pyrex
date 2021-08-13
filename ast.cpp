@@ -2,7 +2,9 @@
 // Created by bercik on 13.08.2021.
 //
 
-enum NodeType {
+#include <string>
+
+enum NodeKind {
     CHAR,
     GROUP,
     STAR,
@@ -13,9 +15,11 @@ enum NodeType {
 
 
 struct Node {
-    virtual NodeType node_type() = 0;
-
     virtual ~Node() = default;
+
+    virtual NodeKind node_kind() = 0;
+
+    virtual std::string to_string() = 0;
 };
 
 struct LeafNode : Node {
@@ -26,8 +30,8 @@ struct CharNode : LeafNode {
 
     explicit CharNode(char value) : value(value) {}
 
-    NodeType node_type() override {
-        return NodeType::CHAR;
+    NodeKind node_kind() override {
+        return NodeKind::CHAR;
     }
 };
 
@@ -47,8 +51,12 @@ struct Group : InternalNode {
 
     explicit Group(int number) : number(number) {}
 
-    NodeType node_type() override {
-        return NodeType::GROUP;
+    ~Group() override {
+        delete operand;
+    }
+
+    NodeKind node_kind() override {
+        return NodeKind::GROUP;
     }
 
     InternalNode::Type internal_node_type() override {
@@ -71,6 +79,10 @@ struct Operator : InternalNode {
 struct UnaryOperator : Operator {
     Node *operand = nullptr;
 
+    ~UnaryOperator() override {
+        delete operand;
+    }
+
     int arity() override {
         return 1;
     }
@@ -80,14 +92,19 @@ struct BinaryOperator : Operator {
     Node *left_operand = nullptr;
     Node *right_operand = nullptr;
 
+    ~BinaryOperator() override {
+        delete left_operand;
+        delete right_operand;
+    }
+
     int arity() override {
         return 2;
     }
 };
 
 struct StarNode : UnaryOperator {
-    NodeType node_type() override {
-        return NodeType::STAR;
+    NodeKind node_kind() override {
+        return NodeKind::STAR;
     }
 
     int precedence() override {
@@ -96,8 +113,8 @@ struct StarNode : UnaryOperator {
 };
 
 struct QMarkNode : UnaryOperator {
-    NodeType node_type() override {
-        return NodeType::QMARK;
+    NodeKind node_kind() override {
+        return NodeKind::QMARK;
     }
 
     int precedence() override {
@@ -106,8 +123,8 @@ struct QMarkNode : UnaryOperator {
 };
 
 struct ConcatNode : BinaryOperator {
-    NodeType node_type() override {
-        return NodeType::CONCAT;
+    NodeKind node_kind() override {
+        return NodeKind::CONCAT;
     }
 
     int precedence() override {
@@ -116,8 +133,8 @@ struct ConcatNode : BinaryOperator {
 };
 
 struct UnionNode : BinaryOperator {
-    NodeType node_type() override {
-        return NodeType::UNION;
+    NodeKind node_kind() override {
+        return NodeKind::UNION;
     }
 
     int precedence() override {

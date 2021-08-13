@@ -13,12 +13,12 @@
  * 2 - union
  */
 
-enum class NodeType {
+enum class NodeKind {
     STAR, QMARK, UNION, CONCAT, EMPTY, CHAR
 };
 
 struct Node {
-    NodeType type;
+    NodeKind type;
     union {
         Node *operand;
         struct {
@@ -44,7 +44,7 @@ Node *build_tree(std::vector<char> const &onp) {
 
             auto back = results.back();
             results.pop_back();
-            results.push_back(new Node{(c == '*' ? NodeType::STAR : NodeType::QMARK),
+            results.push_back(new Node{(c == '*' ? NodeKind::STAR : NodeKind::QMARK),
                                        {.operand = back}});
         } else if (c == '.' || c == '|') {
             if (results.size() < 2) {
@@ -56,14 +56,14 @@ Node *build_tree(std::vector<char> const &onp) {
             auto left = results.back();
             results.pop_back();
             results.push_back(
-                new Node{(c == '.' ? NodeType::CONCAT : NodeType::UNION),
+                new Node{(c == '.' ? NodeKind::CONCAT : NodeKind::UNION),
                          {.children = {
                              .left_operand = left,
                              .right_operand = right}}});
         } else if (c == 'e') {
-            results.push_back(new Node{NodeType::EMPTY});
+            results.push_back(new Node{NodeKind::EMPTY});
         } else {
-            results.push_back(new Node{NodeType::CHAR,
+            results.push_back(new Node{NodeKind::CHAR,
                                        {.leaf = {.c = c, .id = id}}});
             id += 1;
         }
@@ -166,14 +166,14 @@ Node *parse(std::string const &regex) {
 }
 
 bool nullable(Node *node) {
-    if (node->type == NodeType::STAR ||
-        node->type == NodeType::EMPTY ||
-        node->type == NodeType::QMARK) {
+    if (node->type == NodeKind::STAR ||
+        node->type == NodeKind::EMPTY ||
+        node->type == NodeKind::QMARK) {
         return true;
-    } else if (node->type == NodeType::CONCAT) {
+    } else if (node->type == NodeKind::CONCAT) {
         return nullable(node->value.children.left_operand) &&
                nullable(node->value.children.right_operand);
-    } else if (node->type == NodeType::UNION) {
+    } else if (node->type == NodeKind::UNION) {
         return nullable(node->value.children.left_operand) ||
                nullable(node->value.children.right_operand);
     } else {
@@ -182,9 +182,9 @@ bool nullable(Node *node) {
 }
 
 std::set<int> first_pos(Node *node) {
-    if (node->type == NodeType::STAR || node->type == NodeType::QMARK) {
+    if (node->type == NodeKind::STAR || node->type == NodeKind::QMARK) {
         return first_pos(node->value.operand);
-    } else if (node->type == NodeType::CONCAT) {
+    } else if (node->type == NodeKind::CONCAT) {
         std::set<int> result;
 
         if (nullable(node->value.children.left_operand)) {
@@ -196,14 +196,14 @@ std::set<int> first_pos(Node *node) {
         } else {
             return first_pos(node->value.children.left_operand);
         }
-    } else if (node->type == NodeType::UNION) {
+    } else if (node->type == NodeKind::UNION) {
         std::set<int> result;
         auto first = first_pos(node->value.children.left_operand);
         auto second = first_pos(node->value.children.right_operand);
         result.insert(first.begin(), first.end());
         result.insert(second.begin(), second.end());
         return result;
-    } else if (node->type == NodeType::EMPTY) {
+    } else if (node->type == NodeKind::EMPTY) {
         return {};
     } else {
         return std::set<int>({node->value.leaf.id});
@@ -211,9 +211,9 @@ std::set<int> first_pos(Node *node) {
 }
 
 std::set<int> last_pos(Node *node) {
-    if (node->type == NodeType::STAR || node->type == NodeType::QMARK) {
+    if (node->type == NodeKind::STAR || node->type == NodeKind::QMARK) {
         return last_pos(node->value.operand);
-    } else if (node->type == NodeType::CONCAT) {
+    } else if (node->type == NodeKind::CONCAT) {
         std::set<int> result;
 
         if (nullable(node->value.children.right_operand)) {
@@ -225,14 +225,14 @@ std::set<int> last_pos(Node *node) {
         } else {
             return last_pos(node->value.children.right_operand);
         }
-    } else if (node->type == NodeType::UNION) {
+    } else if (node->type == NodeKind::UNION) {
         std::set<int> result;
         auto first = last_pos(node->value.children.left_operand);
         auto second = last_pos(node->value.children.right_operand);
         result.insert(first.begin(), first.end());
         result.insert(second.begin(), second.end());
         return result;
-    } else if (node->type == NodeType::EMPTY) {
+    } else if (node->type == NodeKind::EMPTY) {
         return {};
     } else {
         return std::set<int>({node->value.leaf.id});
@@ -256,17 +256,17 @@ void print(std::set<int> const &set) {
 }
 
 void dfs(Node *node) {
-    if (node->type == NodeType::EMPTY) {
+    if (node->type == NodeKind::EMPTY) {
         std::cout << "e";
-    } else if (node->type == NodeType::CHAR) {
+    } else if (node->type == NodeKind::CHAR) {
         std::cout << node->value.leaf.id << "";
-    } else if (node->type == NodeType::STAR) {
+    } else if (node->type == NodeKind::STAR) {
         dfs(node->value.operand);
         std::cout << "*";
-    } else if (node->type == NodeType::QMARK) {
+    } else if (node->type == NodeKind::QMARK) {
         dfs(node->value.operand);
         std::cout << "?";
-    } else if (node->type == NodeType::CONCAT) {
+    } else if (node->type == NodeKind::CONCAT) {
         dfs(node->value.children.left_operand);
         dfs(node->value.children.right_operand);
         std::cout << ".";
@@ -284,7 +284,7 @@ void dfs(Node *node) {
 }
 
 void next_pos_internal(Node *node, std::unordered_map<int, std::set<int>> &map) {
-    if (node->type == NodeType::STAR) {
+    if (node->type == NodeKind::STAR) {
         next_pos_internal(node->value.operand, map);
 
         for (int i : last_pos(node)) {
@@ -292,9 +292,9 @@ void next_pos_internal(Node *node, std::unordered_map<int, std::set<int>> &map) 
                 map[i].emplace(j);
             }
         }
-    } else if (node->type == NodeType::QMARK) {
+    } else if (node->type == NodeKind::QMARK) {
         next_pos_internal(node->value.operand, map);
-    } else if (node->type == NodeType::CONCAT) {
+    } else if (node->type == NodeKind::CONCAT) {
         next_pos_internal(node->value.children.left_operand, map);
         next_pos_internal(node->value.children.right_operand, map);
 
@@ -303,7 +303,7 @@ void next_pos_internal(Node *node, std::unordered_map<int, std::set<int>> &map) 
                 map[i].emplace(j);
             }
         }
-    } else if (node->type == NodeType::UNION) {
+    } else if (node->type == NodeKind::UNION) {
         next_pos_internal(node->value.children.left_operand, map);
         next_pos_internal(node->value.children.right_operand, map);
     }
