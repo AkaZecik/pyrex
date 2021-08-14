@@ -24,6 +24,8 @@ struct Node {
     virtual NodeKind node_kind() = 0;
 
     virtual std::string to_string() = 0;
+
+    virtual bool nullable() = 0;
 };
 
 struct LeafNode : Node {
@@ -62,8 +64,7 @@ struct CharNode : LeafNode {
                 return "\\?";
             default:
                 if (' ' <= value && value <= '~') {
-                    std::string hehe(1, value);
-                    return std::string(1, value);
+                    return {1, value};
                 } else {
                     // TODO: assumes size of char is 1 byte
                     static char const *const hex = "0123456789abcdef";
@@ -74,6 +75,10 @@ struct CharNode : LeafNode {
                     return result;
                 }
         }
+    }
+
+    bool nullable() override {
+        return false;
     }
 };
 
@@ -111,6 +116,10 @@ struct Group : InternalNode {
 
     std::string to_string() override {
         return std::string("(").append(operand->to_string()).append(")");
+    }
+
+    bool nullable() override {
+        return operand->nullable();
     }
 };
 
@@ -160,6 +169,10 @@ struct StarNode : UnaryOperator {
     std::string to_string() override {
         return operand->to_string().append("*");
     }
+
+    bool nullable() override {
+        return true;
+    }
 };
 
 struct QMarkNode : UnaryOperator {
@@ -173,6 +186,10 @@ struct QMarkNode : UnaryOperator {
 
     std::string to_string() override {
         return operand->to_string().append("?");
+    }
+
+    bool nullable() override {
+        return true;
     }
 };
 
@@ -188,6 +205,10 @@ struct ConcatNode : BinaryOperator {
     std::string to_string() override {
         return left_operand->to_string().append(right_operand->to_string());
     }
+
+    bool nullable() override {
+        return left_operand->nullable() && right_operand->nullable();
+    }
 };
 
 struct UnionNode : BinaryOperator {
@@ -201,6 +222,10 @@ struct UnionNode : BinaryOperator {
 
     std::string to_string() override {
         return left_operand->to_string().append("|").append(right_operand->to_string());
+    }
+
+    bool nullable() override {
+        return left_operand->nullable() || right_operand->nullable();
     }
 };
 
