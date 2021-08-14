@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.19)
 project(pyrex)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 add_executable(general_pyrex general_tokenizer.cpp general_parser.cpp regex.cpp)
 add_executable(kalkulator kalkulator.cpp)

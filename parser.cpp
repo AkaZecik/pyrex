@@ -43,7 +43,7 @@ struct Parser {
             curr_pos += 1;
 
             if (token.type == TokenType::LPAREN) {
-                stack.push_back(new Group(group_id));
+                stack.push_back(new GroupNode(group_id));
                 group_id += 1;
             } else if (token.type == TokenType::RPAREN) {
                 drop_operators_until_group();
@@ -106,7 +106,7 @@ struct Parser {
         }
 
         if (node->internal_node_type() == InternalNode::Type::GROUP) {
-            auto group = reinterpret_cast<Group *>(node);
+            auto group = reinterpret_cast<GroupNode *>(node);
             Node *operand = results.back();
             results.pop_back();
             group->operand = operand;

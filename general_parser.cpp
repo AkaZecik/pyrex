@@ -63,7 +63,7 @@ struct CharsetNode : LeafNode {
 
 
 /************************************************
- *                 Group nodes                  *
+ *                 GroupNode nodes                  *
  ************************************************/
 
 struct GroupNode : InternalNode {

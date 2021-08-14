@@ -6,6 +6,7 @@
 #define AST_CPP
 
 #include <string>
+#include <vector>
 
 enum NodeKind {
     CHAR,
@@ -18,7 +19,6 @@ enum NodeKind {
 
 
 struct Node {
-
     virtual ~Node() = default;
 
     virtual NodeKind node_kind() = 0;
@@ -26,15 +26,20 @@ struct Node {
     virtual std::string to_string() = 0;
 
     virtual bool nullable() = 0;
+
+    virtual std::vector<int> first_pos() = 0;
+
+    virtual std::vector<int> last_pos() = 0;
 };
 
 struct LeafNode : Node {
 };
 
 struct CharNode : LeafNode {
+    int id;
     char value;
 
-    explicit CharNode(char value) : value(value) {}
+    explicit CharNode(int id, char value) : id(id), value(value) {}
 
     NodeKind node_kind() override {
         return NodeKind::CHAR;
@@ -80,6 +85,14 @@ struct CharNode : LeafNode {
     bool nullable() override {
         return false;
     }
+
+    std::vector<int> first_pos() override {
+        return {id};
+    }
+
+    std::vector<int> last_pos() override {
+        return {id};
+    }
 };
 
 struct InternalNode : Node {
@@ -92,13 +105,13 @@ struct InternalNode : Node {
     virtual Type internal_node_type() = 0;
 };
 
-struct Group : InternalNode {
+struct GroupNode : InternalNode {
     int number;
     Node *operand = nullptr;
 
-    explicit Group(int number) : number(number) {}
+    explicit GroupNode(int number) : number(number) {}
 
-    ~Group() override {
+    ~GroupNode() override {
         delete operand;
     }
 
