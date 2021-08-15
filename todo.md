@@ -2,6 +2,7 @@
 * Add handling of +
 * Add handling of {n}
 * Add handling of {n,}, {,n}, {n,m}
+* Handle regexes like a() (it will incorrectly assume it was (a))
 * Improve error messages
 * Add handling for edge cases
 * Add handling for \x00
@@ -13,6 +14,9 @@
 * Count nodes constructed/deconstructed for debugging
 * Verify correct usage of "char" type (can it have more than 1 byte?)
 * to_string works only under the assumption that AST was constructed with a parser+tokenizer
+* Ensure exception safety
+* Handle memory allocation fails
+* Use proper private/public visibilities
 
 Literal escapes:
 * \n

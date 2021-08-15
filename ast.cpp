@@ -24,12 +24,6 @@ struct Node {
     virtual NodeKind node_kind() = 0;
 
     virtual std::string to_string() = 0;
-
-    virtual bool nullable() = 0;
-
-    virtual std::vector<int> first_pos() = 0;
-
-    virtual std::vector<int> last_pos() = 0;
 };
 
 struct LeafNode : Node {
@@ -81,18 +75,6 @@ struct CharNode : LeafNode {
                 }
         }
     }
-
-    bool nullable() override {
-        return false;
-    }
-
-    std::vector<int> first_pos() override {
-        return {id};
-    }
-
-    std::vector<int> last_pos() override {
-        return {id};
-    }
 };
 
 struct InternalNode : Node {
@@ -129,10 +111,6 @@ struct GroupNode : InternalNode {
 
     std::string to_string() override {
         return std::string("(").append(operand->to_string()).append(")");
-    }
-
-    bool nullable() override {
-        return operand->nullable();
     }
 };
 
@@ -182,10 +160,6 @@ struct StarNode : UnaryOperator {
     std::string to_string() override {
         return operand->to_string().append("*");
     }
-
-    bool nullable() override {
-        return true;
-    }
 };
 
 struct QMarkNode : UnaryOperator {
@@ -199,10 +173,6 @@ struct QMarkNode : UnaryOperator {
 
     std::string to_string() override {
         return operand->to_string().append("?");
-    }
-
-    bool nullable() override {
-        return true;
     }
 };
 
@@ -218,10 +188,6 @@ struct ConcatNode : BinaryOperator {
     std::string to_string() override {
         return left_operand->to_string().append(right_operand->to_string());
     }
-
-    bool nullable() override {
-        return left_operand->nullable() && right_operand->nullable();
-    }
 };
 
 struct UnionNode : BinaryOperator {
@@ -235,10 +201,6 @@ struct UnionNode : BinaryOperator {
 
     std::string to_string() override {
         return left_operand->to_string().append("|").append(right_operand->to_string());
-    }
-
-    bool nullable() override {
-        return left_operand->nullable() || right_operand->nullable();
     }
 };
 

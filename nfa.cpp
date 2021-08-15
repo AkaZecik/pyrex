@@ -2,6 +2,9 @@
 // Created by bercik on 14.08.2021.
 //
 
+#ifndef NFA_CPP
+#define NFA_CPP
+
 #include <set>
 #include "ast.cpp"
 
@@ -13,6 +16,7 @@ struct NFA {
         char c;
 
         explicit Node(int id) : id(id), c{} {}
+
         Node(int id, char c) : id(id), c(c) {}
     };
 
@@ -23,6 +27,7 @@ struct NFA {
     static NFA for_char(int id, char c) {
         NFA nfa;
         auto node = new Node(id, c);
+        nfa.start_node.edges.insert(node);
         nfa.end_nodes.push_back(node);
         return nfa;
     }
@@ -47,12 +52,18 @@ struct NFA {
             }
             case CONCAT: {
                 auto concat = reinterpret_cast<ConcatNode *>(node);
-                return from_ast(concat->left_operand).concatenate(from_ast(concat->right_operand));
+                return from_ast(concat->left_operand).concatenate(
+                    from_ast(concat->right_operand)
+                );
             }
             case UNION: {
                 auto union_ = reinterpret_cast<UnionNode *>(node);
-                return from_ast(union_->left_operand).union_(from_ast(union_->right_operand));
+                return from_ast(union_->left_operand).union_(
+                    from_ast(union_->right_operand)
+                );
             }
+            default:
+                throw std::runtime_error("Unknown node kind");
         }
     }
 
@@ -79,7 +90,16 @@ struct NFA {
             end_node->edges.insert(other_first_pos.begin(), other_first_pos.end());
         }
 
-        end_nodes = std::move(other.end_nodes);
+        if (other.contains_empty) {
+            end_nodes.reserve(end_nodes.size() + other.end_nodes.size());
+            end_nodes.insert(
+                end_nodes.end(),
+                other.end_nodes.begin(),
+                other.end_nodes.end()
+            );
+        } else {
+            end_nodes = std::move(other.end_nodes);
+        }
 
         if (contains_empty) {
             start_node.edges.insert(other_first_pos.begin(), other_first_pos.end());
@@ -108,3 +128,5 @@ struct NFA {
         return *this;
     }
 };
+
+#endif // NFA_CPP

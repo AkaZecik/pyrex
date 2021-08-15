@@ -16,6 +16,7 @@ struct Parser {
     std::vector<InternalNode *> stack;
     long long curr_pos = 0;
     int group_id = 1;
+    int char_id = 1;
 
     explicit Parser(std::string regex) {
         Tokenizer tokenizer(std::move(regex));
@@ -43,6 +44,10 @@ struct Parser {
             curr_pos += 1;
 
             if (token.type == TokenType::LPAREN) {
+                if (curr_pos < tokens.size() && tokens[curr_pos].type == TokenType::RPAREN) {
+                    throw std::runtime_error("Empty group");
+                }
+
                 stack.push_back(new GroupNode(group_id));
                 group_id += 1;
             } else if (token.type == TokenType::RPAREN) {
@@ -62,7 +67,8 @@ struct Parser {
             } else if (token.type == TokenType::UNION) {
                 interpret_operator(new UnionNode());
             } else if (token.type == TokenType::CHAR) {
-                results.push_back(new CharNode(token.value));
+                results.push_back(new CharNode(char_id, token.value));
+                char_id += 1;
             } else if (token.type == TokenType::END) {
                 drop_operators_until_group();
 
@@ -148,7 +154,7 @@ struct Parser {
                stack.back()->internal_node_type() == InternalNode::Type::OPERATOR) {
             auto op = reinterpret_cast<Operator *>(stack.back());
 
-            if (op->precedence() >= precedence) {
+            if (op->precedence() <= precedence) {
                 stack.pop_back();
                 push_node(op);
             } else {
