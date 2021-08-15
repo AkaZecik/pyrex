@@ -43,18 +43,20 @@ struct NFA {
             }
             case QMARK: {
                 auto qmark = reinterpret_cast<QMarkNode *>(node);
-                return from_ast(qmark->operand)->qmark();
+                return from_ast(qmark->operand).qmark();
             }
             case CONCAT: {
                 auto concat = reinterpret_cast<ConcatNode *>(node);
-                return from_ast(concat->left_operand)->concatenate(*from_ast(concat->right_operand));
+                return from_ast(concat->left_operand).concatenate(from_ast(concat->right_operand));
             }
             case UNION: {
+                auto union_ = reinterpret_cast<UnionNode *>(node);
+                return from_ast(union_->left_operand).union_(from_ast(union_->right_operand));
             }
         }
     }
 
-    void star() {
+    NFA &star() {
         auto &first_pos = start_node.edges;
 
         for (auto end_node : end_nodes) {
@@ -62,13 +64,15 @@ struct NFA {
         }
 
         contains_empty = true;
+        return *this;
     }
 
-    void qmark() {
+    NFA &qmark() {
         contains_empty = true;
+        return *this;
     }
 
-    void concatenate(NFA &&other) {
+    NFA &concatenate(NFA &&other) {
         auto &other_first_pos = other.start_node.edges;
 
         for (auto end_node : end_nodes) {
@@ -84,9 +88,10 @@ struct NFA {
         contains_empty = contains_empty && other.contains_empty;
         other.start_node.edges.clear();
         other.end_nodes.resize(0);
+        return *this;
     }
 
-    void union_(NFA &&other) {
+    NFA &union_(NFA &&other) {
         start_node.edges.insert(
             other.start_node.edges.begin(),
             other.start_node.edges.end()
@@ -100,5 +105,6 @@ struct NFA {
         other.start_node.edges.clear();
         other.end_nodes.resize(0);
         contains_empty = contains_empty || other.contains_empty;
+        return *this;
     }
 };
