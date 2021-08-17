@@ -33,6 +33,7 @@ struct NFA {
     }
 
     static NFA from_ast(::Node *node) {
+        // TODO: make as the only public method?
         switch (node->node_kind()) {
             case CHAR: {
                 auto c = reinterpret_cast<CharNode *>(node);
