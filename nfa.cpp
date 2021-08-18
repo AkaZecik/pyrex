@@ -6,6 +6,7 @@
 #define NFA_CPP
 
 #include <set>
+#include <forward_list>
 #include "ast.cpp"
 
 
@@ -21,14 +22,18 @@ struct NFA {
     };
 
     Node start_node{0};
-    std::vector<Node *> end_nodes;
+    std::forward_list<Node *> all_nodes;
+    std::forward_list<Node *> end_nodes;
     bool contains_empty = false;
+
+    // static NFA for_empty();
 
     static NFA for_char(int id, char c) {
         NFA nfa;
         auto node = new Node(id, c);
         nfa.start_node.edges.insert(node);
-        nfa.end_nodes.push_back(node);
+        nfa.all_nodes.push_front(node);
+        nfa.end_nodes.push_front(node);
         return nfa;
     }
 
@@ -92,22 +97,21 @@ struct NFA {
         }
 
         if (other.contains_empty) {
-            end_nodes.reserve(end_nodes.size() + other.end_nodes.size());
-            end_nodes.insert(
-                end_nodes.end(),
-                other.end_nodes.begin(),
-                other.end_nodes.end()
-            );
-        } else {
-            end_nodes = std::move(other.end_nodes);
+            other.end_nodes.splice_after(other.end_nodes.cbefore_begin(), end_nodes);
         }
+
+        std::swap(end_nodes, other.end_nodes);
 
         if (contains_empty) {
             start_node.edges.insert(other_first_pos.begin(), other_first_pos.end());
         }
 
+        other.all_nodes.splice_after(other.all_nodes.cbefore_begin(), all_nodes);
+        std::swap(all_nodes, other.all_nodes);
         contains_empty = contains_empty && other.contains_empty;
+
         other.start_node.edges.clear();
+        other.all_nodes.resize(0);
         other.end_nodes.resize(0);
         return *this;
     }
@@ -117,17 +121,19 @@ struct NFA {
             other.start_node.edges.begin(),
             other.start_node.edges.end()
         );
-        end_nodes.reserve(end_nodes.size() + other.end_nodes.size());
-        end_nodes.insert(
-            end_nodes.end(),
-            other.end_nodes.begin(),
-            other.end_nodes.end()
-        );
         other.start_node.edges.clear();
-        other.end_nodes.resize(0);
+
+        other.all_nodes.splice_after(other.all_nodes.cbefore_begin(), all_nodes);
+        std::swap(all_nodes, other.all_nodes);
+
+        other.end_nodes.splice_after(other.end_nodes.cbefore_begin(), end_nodes);
+        std::swap(end_nodes, other.end_nodes);
+
         contains_empty = contains_empty || other.contains_empty;
         return *this;
     }
 };
 
 #endif // NFA_CPP
+
+// ((ab?)|ba?bb)*abb

@@ -8,30 +8,32 @@
 #include "parser.cpp"
 #include "nfa.cpp"
 
-void collect_nodes(NFA::Node const *node, std::set<NFA::Node const *> &all_nodes) {
-    all_nodes.insert(node);
-
-    for (auto *nbh : node->edges) {
-        if (all_nodes.find(nbh) == all_nodes.end()) {
-            collect_nodes(nbh, all_nodes);
-        }
-    }
-}
-
 void print_nfa(NFA const &nfa) {
-    std::set<NFA::Node const *> all_nodes;
-    NFA::Node const *start = &nfa.start_node;
-    collect_nodes(start, all_nodes);
+    std::cout << "0 (#) -> ";
 
-    for (auto *node : all_nodes) {
+    for (auto nbh : nfa.start_node.edges) {
+        std::cout << nbh->id << ", ";
+    }
+
+    std::cout << std::endl;
+
+    for (auto node : nfa.all_nodes) {
         std::cout << node->id << " (" << node->c << ")" << " -> ";
 
-        for (auto *nbh : node->edges) {
+        for (auto nbh : node->edges) {
             std::cout << nbh->id << ", ";
         }
 
         std::cout << std::endl;
     }
+
+    std::cout << "end: ";
+
+    for (auto node : nfa.end_nodes) {
+        std::cout << node->id << " ";
+    }
+
+    std::cout << std::endl;
 }
 
 int main() {
