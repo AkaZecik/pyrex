@@ -38,6 +38,7 @@ struct PowerDFA {
     bool contains_empty = false;
 
     static PowerDFA from_NFA(NFA const &nfa) {
+        NFA::AllEdges nfa_edges;
         PowerDFA dfa{
             .start_node = {.nodes = {&nfa.start_node}},
             .contains_empty = nfa.contains_empty
@@ -48,7 +49,7 @@ struct PowerDFA {
     }
 
     static void subset_construction(
-        TmpNode *curr_node, std::set<TmpNode *, TmpNode::Compare> &all_nodes
+        NFA::AllEdges const &all_nfa_edges, TmpNode *curr_node, std::set<TmpNode *, TmpNode::Compare> &all_nodes
     ) {
         // make "all nodes of dfa" a vector and just emplace on the back?
         // and for comparison just store pointers into that vector? (be careful,

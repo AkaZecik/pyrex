@@ -7,6 +7,7 @@
 
 #include <set>
 #include <forward_list>
+#include <unordered_map>
 #include "ast.cpp"
 
 
@@ -26,7 +27,64 @@ struct NFA {
     std::forward_list<Node *> end_nodes;
     bool contains_empty = false;
 
-    // static NFA for_empty();
+    NFA() = default;
+
+    NFA(NFA const &other) {
+        std::unordered_map<Node const *, Node *> new_nodes;
+        new_nodes[&other.start_node] = &start_node;
+        auto it = all_nodes.cbefore_begin();
+
+        for (auto node : other.all_nodes) {
+            auto new_node = new Node(node->id, node->c);
+            new_nodes[node] = new_node;
+            all_nodes.insert_after(it, new_node);
+            ++it;
+        }
+    }
+
+    NFA(NFA &&other) noexcept: NFA() {
+        swap(*this, other);
+    }
+
+    friend void swap(NFA &left, NFA &right) {
+        using std::swap;
+        std::swap(left.start_node, right.start_node);
+        std::swap(left.all_nodes, right.all_nodes);
+        std::swap(left.end_nodes, right.end_nodes);
+        std::swap(left.contains_empty, right.contains_empty);
+    }
+
+    NFA &operator=(NFA nfa) {
+        swap(*this, nfa);
+        return *this;
+    }
+
+    using AllEdges = std::unordered_map<
+        Node *,
+        std::unordered_map<char, std::vector<Node *>>
+    >;
+
+    AllEdges get_all_edges() {
+        AllEdges allEdges;
+
+        for (auto node : all_nodes) {
+            for (auto nbh : node->edges) {
+                allEdges[node][nbh->c].push_back(nbh);
+            }
+        }
+
+        return allEdges;
+    }
+
+    static NFA for_nothing() {
+        return {};
+    }
+
+     static NFA for_empty() {
+        NFA nfa;
+        nfa.contains_empty = true;
+        return nfa;
+    }
 
     static NFA for_char(int id, char c) {
         NFA nfa;
