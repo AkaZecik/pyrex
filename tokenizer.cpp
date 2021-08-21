@@ -13,10 +13,14 @@
 enum class TokenType {
     LPAREN,
     RPAREN,
+    LCURLY,
+    RCURLY,
     STAR,
+    PLUS,
     UNION,
     QMARK,
     CHAR,
+    DIGIT,
     END,
 };
 
@@ -70,7 +74,11 @@ struct Tokenizer {
             case '\\':
                 return parse_escape();
             default:
-                return {TokenType::CHAR, c};
+                if ('0' <= c && c <= '9') {
+                    return {TokenType::DIGIT, c};
+                } else {
+                    return {TokenType::CHAR, c};
+                }
         }
     }
 
@@ -99,10 +107,16 @@ struct Tokenizer {
                 return {TokenType::CHAR, ')'};
             case '*':
                 return {TokenType::CHAR, '*'};
+            case '+':
+                return {TokenType::CHAR, '+'};
             case '|':
                 return {TokenType::CHAR, '|'};
             case '?':
                 return {TokenType::CHAR, '?'};
+            case '{':
+                return {TokenType::CHAR, '{'};
+            case '}':
+                return {TokenType::CHAR, '}'};
             case 'x':
                 return {TokenType::CHAR, parse_hex()};
             default:

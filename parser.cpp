@@ -44,7 +44,8 @@ struct Parser {
             curr_pos += 1;
 
             if (token.type == TokenType::LPAREN) {
-                if (curr_pos < tokens.size() && tokens[curr_pos].type == TokenType::RPAREN) {
+                if (curr_pos < tokens.size() &&
+                    tokens[curr_pos].type == TokenType::RPAREN) {
                     throw std::runtime_error("Empty group");
                 }
 
@@ -60,13 +61,18 @@ struct Parser {
                 InternalNode *group = stack.back();
                 stack.pop_back();
                 push_node(group);
+            } else if (token.type == TokenType::LCURLY) {
+                parse_range();
+            } else if (token.type == TokenType::RCURLY) {
+                throw std::runtime_error("Unpaired closing curly brace");
             } else if (token.type == TokenType::STAR) {
                 interpret_operator(new StarNode());
             } else if (token.type == TokenType::QMARK) {
                 interpret_operator(new QMarkNode());
             } else if (token.type == TokenType::UNION) {
                 interpret_operator(new UnionNode());
-            } else if (token.type == TokenType::CHAR) {
+            } else if (token.type == TokenType::CHAR ||
+                       token.type == TokenType::DIGIT) {
                 results.push_back(new CharNode(char_id, token.value));
                 char_id += 1;
             } else if (token.type == TokenType::END) {
@@ -81,6 +87,8 @@ struct Parser {
                 }
 
                 return results.back();
+            } else {
+                throw std::runtime_error("Unknown token type");
             }
         }
     }
@@ -92,17 +100,63 @@ struct Parser {
     static inline bool before_concat(Token token) {
         return (
             token.type == TokenType::RPAREN ||
+            token.type == TokenType::RCURLY ||
             token.type == TokenType::STAR ||
+            token.type == TokenType::PLUS ||
             token.type == TokenType::QMARK ||
-            token.type == TokenType::CHAR
+            token.type == TokenType::CHAR ||
+            token.type == TokenType::DIGIT
         );
     }
 
     static inline bool after_concat(Token token) {
         return (
             token.type == TokenType::LPAREN ||
-            token.type == TokenType::CHAR
+            token.type == TokenType::CHAR ||
+            token.type == TokenType::DIGIT
         );
+    }
+
+    void parse_range() {
+        std::string num1, num2;
+
+        while (tokens[curr_pos].type == TokenType::DIGIT) {
+            num1.push_back(tokens[curr_pos].value);
+            curr_pos += 1;
+        }
+
+        if (tokens[curr_pos].type == TokenType::CHAR && tokens[curr_pos].value == ',') {
+            curr_pos += 1;
+
+            while (tokens[curr_pos].type == TokenType::DIGIT) {
+                num2.push_back(tokens[curr_pos].value);
+                curr_pos += 1;
+            }
+
+            if (tokens[curr_pos].type != TokenType::RCURLY) {
+                throw std::runtime_error("Unclosed range operator");
+            }
+
+            curr_pos += 1;
+
+            if (num1.empty() && num2.empty()) {
+                throw std::runtime_error("Incorrect value in range operator");
+            } else if (num1.empty()) {
+                interpret_operator(new MaxNode(std::stoi(num2)));
+            } else if (num2.empty()) {
+                interpret_operator(new MinNode(std::stoi(num1)));
+            } else {
+                interpret_operator(new RangeNode(std::stoi(num1), std::stoi(num2)));
+            }
+        } else {
+            if (num1.empty()) {
+                throw std::runtime_error("Incorrect value in range operator");
+            } else if (tokens[curr_pos].type != TokenType::RCURLY) {
+                throw std::runtime_error("Unclosed range operator");
+            }
+
+            interpret_operator(new PowerNode{std::stoi(num1)});
+        }
     }
 
     void push_node(InternalNode *node) {
@@ -165,7 +219,7 @@ struct Parser {
 
     void drop_operators_until_group() {
         while (!stack.empty() &&
-        stack.back()->internal_node_type() != InternalNode::Type::GROUP) {
+               stack.back()->internal_node_type() != InternalNode::Type::GROUP) {
             auto op = reinterpret_cast<Operator *>(stack.back());
             stack.pop_back();
             push_node(op);

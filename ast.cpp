@@ -12,6 +12,11 @@ enum NodeKind {
     CHAR,
     GROUP,
     STAR,
+    PLUS,
+    POWER,
+    MIN,
+    MAX,
+    RANGE,
     QMARK,
     CONCAT,
     UNION,
@@ -159,6 +164,97 @@ struct StarNode : UnaryOperator {
 
     std::string to_string() override {
         return operand->to_string().append("*");
+    }
+};
+
+struct PlusNode : UnaryOperator {
+    NodeKind node_kind() override {
+        return NodeKind::PLUS;
+    }
+
+    int precedence() override {
+        return 1;
+    }
+
+    std::string to_string() override {
+        return operand->to_string().append("+");
+    }
+};
+
+struct PowerNode : UnaryOperator {
+    int power;
+
+    explicit PowerNode(int power) : power(power) {}
+
+    NodeKind node_kind() override {
+        return NodeKind::POWER;
+    }
+
+    int precedence() override {
+        return 1;
+    }
+
+    std::string to_string() override {
+        return operand->to_string().append("{").append(std::to_string(power)).append(
+            "}");
+    }
+};
+
+struct MinNode : UnaryOperator {
+    int min;
+
+    explicit MinNode(int min) : min(min) {}
+
+    NodeKind node_kind() override {
+        return NodeKind::MIN;
+    }
+
+    int precedence() override {
+        return 1;
+    }
+
+    std::string to_string() override {
+        return operand->to_string().append("{").append(std::to_string(min)).append(
+            ",}");
+    }
+};
+
+struct MaxNode : UnaryOperator {
+    int max;
+
+    explicit MaxNode(int max) : max(max) {}
+
+    NodeKind node_kind() override {
+        return NodeKind::MAX;
+    }
+
+    int precedence() override {
+        return 1;
+    }
+
+    std::string to_string() override {
+        return operand->to_string().append("{,").append(std::to_string(max)).append(
+            "}");
+    }
+};
+
+struct RangeNode : UnaryOperator {
+    int min;
+    int max;
+
+    RangeNode(int min, int max) : min(min), max(max) {}
+
+    NodeKind node_kind() override {
+        return NodeKind::RANGE;
+    }
+
+    int precedence() override {
+        return 1;
+    }
+
+    std::string to_string() override {
+        return operand->to_string().append("{").append(std::to_string(min)).append(
+            ",").append(std::to_string(max)).append("}");
     }
 };
 
