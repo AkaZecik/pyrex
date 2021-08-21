@@ -12,8 +12,9 @@
 struct PowerDFA {
     struct TmpNode {
         std::set<NFA::Node const *> nodes;
-        std::unordered_map<char, TmpNode *> edges;
-        bool end;
+        std::set<TmpNode *> edges;
+        char c;
+        bool accepting;
 
         struct Compare {
             using is_transparent = void;
@@ -36,12 +37,13 @@ struct PowerDFA {
 
     TmpNode start_node;
     std::vector<TmpNode *> all_nodes;
-    bool contains_empty = false;
 
     static PowerDFA from_NFA(NFA const &nfa) {
         PowerDFA dfa{
-            .start_node = {.nodes = {&nfa.start_node}},
-            .contains_empty = nfa.start_node.accepting;
+            .start_node = {
+                .nodes = {&nfa.start_node},
+                .accepting = nfa.start_node.accepting
+            }
         };
         std::set<TmpNode *, TmpNode::Compare> all_nodes;
         subset_construction(&dfa.start_node, all_nodes);
@@ -58,7 +60,7 @@ struct PowerDFA {
         for (NFA::Node const *nfa_node : curr_node->nodes) {
             for (NFA::Node const *nbh : nfa_node->edges) {
                 nfa_edges[nbh->c].insert(nbh);
-                accepting_edge[nbh->c] |= nbh->accepting;
+                accepting_edge[nbh->c] = accepting_edge[nbh->c] || nbh->accepting;
             }
         }
 
@@ -66,11 +68,13 @@ struct PowerDFA {
             auto result = all_nodes.find(nfa_nodes);
 
             if (result == all_nodes.end()) {
-                auto new_node = new TmpNode{std::move(nfa_nodes), {}, accepting_edge[c]};
-                curr_node->edges[c] = new_node;
+                auto new_node = new TmpNode{std::move(nfa_nodes), {}, c,
+                                            accepting_edge[c]};
+                curr_node->edges.insert(new_node);
+                all_nodes.insert(new_node);
                 subset_construction(new_node, all_nodes);
             } else {
-                curr_node->edges[c] = *result;
+                curr_node->edges.insert(*result);
             }
         }
     }

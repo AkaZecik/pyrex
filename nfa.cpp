@@ -18,31 +18,51 @@ struct NFA {
         char c;
         bool accepting;
 
-        explicit Node(int id) : id(id), c{}, accepting{} {}
+        explicit Node(int id, bool accepting) : id(id), c{}, accepting{accepting} {}
 
-        Node(int id, char c) : id(id), c(c), accepting{} {}
+        Node(int id, char c, bool accepting) : id(id), c(c), accepting{accepting} {}
     };
 
-    Node start_node{0};
+    Node start_node{0, false};
     std::forward_list<Node *> all_nodes;
     std::forward_list<Node *> end_nodes;
 
     NFA() = default;
 
     NFA(NFA const &other) {
+//        std::cout << "NFA(NFA const &)" << std::endl;
+        start_node.accepting = other.start_node.accepting;
         std::unordered_map<Node const *, Node *> new_nodes;
-        new_nodes[&other.start_node] = &start_node;
-        auto it = all_nodes.cbefore_begin();
+        auto all_nodes_it = all_nodes.cbefore_begin();
+        auto end_nodes_it = end_nodes.cbefore_begin();
 
         for (auto node : other.all_nodes) {
-            auto new_node = new Node(node->id, node->c);
+            auto new_node = new Node(node->id, node->c, node->accepting);
             new_nodes[node] = new_node;
-            all_nodes.insert_after(it, new_node);
-            ++it;
+            all_nodes.insert_after(all_nodes_it, new_node);
+            ++all_nodes_it;
+
+            if (node->accepting) {
+                end_nodes.insert_after(end_nodes_it, new_node);
+                ++end_nodes_it;
+            }
+        }
+
+        for (auto nbh : other.start_node.edges) {
+            start_node.edges.insert(new_nodes[nbh]);
+        }
+
+        for (auto node : other.all_nodes) {
+            auto curr_node = new_nodes[node];
+
+            for (auto nbh : node->edges) {
+                curr_node->edges.insert(new_nodes[nbh]);
+            }
         }
     }
 
     NFA(NFA &&other) noexcept: NFA() {
+//        std::cout << "NFA(NFA &&)" << std::endl;
         swap(*this, other);
     }
 
@@ -76,7 +96,7 @@ struct NFA {
 
     static NFA for_char(int id, char c) {
         NFA nfa;
-        auto node = new Node(id, c);
+        auto node = new Node(id, c, true);
         nfa.start_node.edges.insert(node);
         nfa.all_nodes.push_front(node);
         nfa.end_nodes.push_front(node);
@@ -95,23 +115,23 @@ struct NFA {
             }
             case STAR: {
                 auto star = reinterpret_cast<StarNode *>(node);
-                return from_ast(star->operand).star();
+                return std::move(from_ast(star->operand).star());
             }
             case QMARK: {
                 auto qmark = reinterpret_cast<QMarkNode *>(node);
-                return from_ast(qmark->operand).qmark();
+                return std::move(from_ast(qmark->operand).qmark());
             }
             case CONCAT: {
                 auto concat = reinterpret_cast<ConcatNode *>(node);
-                return from_ast(concat->left_operand).concatenate(
+                return std::move(from_ast(concat->left_operand).concatenate(
                     from_ast(concat->right_operand)
-                );
+                ));
             }
             case UNION: {
                 auto union_ = reinterpret_cast<UnionNode *>(node);
-                return from_ast(union_->left_operand).union_(
+                return std::move(from_ast(union_->left_operand).union_(
                     from_ast(union_->right_operand)
-                );
+                ));
             }
             default:
                 throw std::runtime_error("Unknown node kind");
@@ -143,6 +163,10 @@ struct NFA {
 
         if (other.start_node.accepting) {
             other.end_nodes.splice_after(other.end_nodes.cbefore_begin(), end_nodes);
+        } else {
+            for (auto node : end_nodes) {
+                node->accepting = false;
+            }
         }
 
         std::swap(end_nodes, other.end_nodes);
@@ -156,6 +180,7 @@ struct NFA {
         start_node.accepting = start_node.accepting && other.start_node.accepting;
 
         other.start_node.edges.clear();
+        other.start_node.accepting = false;
         other.all_nodes.resize(0);
         other.end_nodes.resize(0);
         return *this;
@@ -175,6 +200,7 @@ struct NFA {
         std::swap(end_nodes, other.end_nodes);
 
         start_node.accepting = start_node.accepting || other.start_node.accepting;
+        other.start_node.accepting = false;
         return *this;
     }
 };
