@@ -76,7 +76,7 @@ struct Tokenizer {
 
     Token parse_escape() {
         if (curr_pos == regex.size()) {
-            throw std::runtime_error("Premature end of regex");
+            throw std::runtime_error("Premature accepting of regex");
         }
 
         char c = regex[curr_pos];
@@ -112,7 +112,7 @@ struct Tokenizer {
 
     char parse_hex() {
         if (curr_pos + 2 > regex.size()) {
-            throw std::runtime_error("Premature end of regex");
+            throw std::runtime_error("Premature accepting of regex");
         }
 
         int value = std::stoi(regex.substr(curr_pos, 2), nullptr, 16);

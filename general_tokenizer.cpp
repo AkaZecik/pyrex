@@ -43,10 +43,10 @@ enum class TokenType {
     SHORT_UNICODE, // \uNNNN
     LONG_UNICODE, // \UNNNNNNNN
     LITERAL, // anything else
-    END, // end of tokens
+    END, // accepting of tokens
 };
 
-/* TODO: add "start" and "end" values */
+/* TODO: add "start" and "accepting" values */
 union TokenValue {
     char c;
     unsigned int i;
@@ -144,7 +144,7 @@ struct Tokenizer {
             throw std::string(
                 "Bad escape at position " +
                 std::to_string(curr_pos - 1) +
-                ": premature end of pattern");
+                ": premature accepting of pattern");
         }
 
         char c = regex[curr_pos];
@@ -190,7 +190,7 @@ struct Tokenizer {
             throw std::string(
                 "Bad escape at position " +
                 std::to_string(curr_pos - 2) +
-                ": premature end of pattern"
+                ": premature accepting of pattern"
             );
         }
 

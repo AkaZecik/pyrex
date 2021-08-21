@@ -41,7 +41,7 @@ struct PowerDFA {
     static PowerDFA from_NFA(NFA const &nfa) {
         PowerDFA dfa{
             .start_node = {.nodes = {&nfa.start_node}},
-            .contains_empty = nfa.contains_empty
+            .contains_empty = nfa.start_node.accepting;
         };
         std::set<TmpNode *, TmpNode::Compare> all_nodes;
         subset_construction(&dfa.start_node, all_nodes);
@@ -58,7 +58,7 @@ struct PowerDFA {
         for (NFA::Node const *nfa_node : curr_node->nodes) {
             for (NFA::Node const *nbh : nfa_node->edges) {
                 nfa_edges[nbh->c].insert(nbh);
-                accepting_edge[nbh->c] |= nbh->end;
+                accepting_edge[nbh->c] |= nbh->accepting;
             }
         }
 

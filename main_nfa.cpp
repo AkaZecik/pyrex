@@ -27,7 +27,7 @@ void print_nfa(NFA const &nfa) {
         std::cout << std::endl;
     }
 
-    std::cout << "end: ";
+    std::cout << "accepting: ";
 
     for (auto node : nfa.end_nodes) {
         std::cout << node->id << " ";

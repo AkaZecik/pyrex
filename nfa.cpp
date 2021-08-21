@@ -16,17 +16,16 @@ struct NFA {
         std::set<Node *> edges;
         int id;
         char c;
-        bool end;
+        bool accepting;
 
-        explicit Node(int id) : id(id), c{}, end{} {}
+        explicit Node(int id) : id(id), c{}, accepting{} {}
 
-        Node(int id, char c) : id(id), c(c), end{} {}
+        Node(int id, char c) : id(id), c(c), accepting{} {}
     };
 
     Node start_node{0};
     std::forward_list<Node *> all_nodes;
     std::forward_list<Node *> end_nodes;
-    bool contains_empty = false;
 
     NFA() = default;
 
@@ -52,7 +51,6 @@ struct NFA {
         std::swap(left.start_node, right.start_node);
         std::swap(left.all_nodes, right.all_nodes);
         std::swap(left.end_nodes, right.end_nodes);
-        std::swap(left.contains_empty, right.contains_empty);
     }
 
     NFA &operator=(NFA nfa) {
@@ -72,7 +70,7 @@ struct NFA {
 
      static NFA for_empty() {
         NFA nfa;
-        nfa.contains_empty = true;
+        nfa.start_node.accepting = true;
         return nfa;
     }
 
@@ -127,12 +125,12 @@ struct NFA {
             end_node->edges.insert(first_pos.begin(), first_pos.end());
         }
 
-        contains_empty = true;
+        start_node.accepting = true;
         return *this;
     }
 
     NFA &qmark() {
-        contains_empty = true;
+        start_node.accepting = true;
         return *this;
     }
 
@@ -143,19 +141,19 @@ struct NFA {
             end_node->edges.insert(other_first_pos.begin(), other_first_pos.end());
         }
 
-        if (other.contains_empty) {
+        if (other.start_node.accepting) {
             other.end_nodes.splice_after(other.end_nodes.cbefore_begin(), end_nodes);
         }
 
         std::swap(end_nodes, other.end_nodes);
 
-        if (contains_empty) {
+        if (start_node.accepting) {
             start_node.edges.insert(other_first_pos.begin(), other_first_pos.end());
         }
 
         other.all_nodes.splice_after(other.all_nodes.cbefore_begin(), all_nodes);
         std::swap(all_nodes, other.all_nodes);
-        contains_empty = contains_empty && other.contains_empty;
+        start_node.accepting = start_node.accepting && other.start_node.accepting;
 
         other.start_node.edges.clear();
         other.all_nodes.resize(0);
@@ -176,7 +174,7 @@ struct NFA {
         other.end_nodes.splice_after(other.end_nodes.cbefore_begin(), end_nodes);
         std::swap(end_nodes, other.end_nodes);
 
-        contains_empty = contains_empty || other.contains_empty;
+        start_node.accepting = start_node.accepting || other.start_node.accepting;
         return *this;
     }
 };
