@@ -237,6 +237,31 @@ struct NFA {
 
         return *this;
     }
+
+    NFA &min(int min) {
+        if (min == 0) {
+            star();
+            return *this;
+        }
+
+        if (min == 1) {
+            return *this;
+        }
+
+        std::vector<NFA> copies(min, *this);
+        copies.back().star();
+
+        for (NFA &copy : copies) {
+            concatenate(std::move(copy));
+        }
+
+        return *this;
+    }
+
+    NFA &max(int n) {
+        range(0, n);
+        return *this;
+    }
 };
 
 #endif // NFA_CPP
