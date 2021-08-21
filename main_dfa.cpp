@@ -64,6 +64,8 @@ void print_dfa(PowerDFA const &dfa) {
     std::cout << std::endl;
 }
 
+// ((ab?)|ba?bb)*abb
+
 int main() {
     while (true) {
         std::string input;

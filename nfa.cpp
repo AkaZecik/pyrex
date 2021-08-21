@@ -206,5 +206,3 @@ struct NFA {
 };
 
 #endif // NFA_CPP
-
-// ((ab?)|ba?bb)*abb
