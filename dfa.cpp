@@ -13,6 +13,7 @@ struct PowerDFA {
     struct TmpNode {
         std::set<NFA::Node const *> nodes;
         std::unordered_map<char, TmpNode *> edges;
+        bool end;
 
         struct Compare {
             using is_transparent = void;
@@ -34,32 +35,30 @@ struct PowerDFA {
     };
 
     TmpNode start_node;
-    std::vector<TmpNode *> end_nodes;
+    std::vector<TmpNode *> all_nodes;
     bool contains_empty = false;
 
     static PowerDFA from_NFA(NFA const &nfa) {
-        NFA::AllEdges nfa_edges;
         PowerDFA dfa{
             .start_node = {.nodes = {&nfa.start_node}},
             .contains_empty = nfa.contains_empty
         };
-        std::set<TmpNode *, TmpNode::Compare> all_nodes({&dfa.start_node});
+        std::set<TmpNode *, TmpNode::Compare> all_nodes;
         subset_construction(&dfa.start_node, all_nodes);
+        dfa.all_nodes = std::vector<TmpNode *>(all_nodes.begin(), all_nodes.end());
         return dfa;
     }
 
     static void subset_construction(
-        NFA::AllEdges const &all_nfa_edges, TmpNode *curr_node, std::set<TmpNode *, TmpNode::Compare> &all_nodes
+        TmpNode *curr_node, std::set<TmpNode *, TmpNode::Compare> &all_nodes
     ) {
-        // make "all nodes of dfa" a vector and just emplace on the back?
-        // and for comparison just store pointers into that vector? (be careful,
-        // vector will change in runtime)
-        // fill in "end_states"
         std::unordered_map<char, std::set<NFA::Node const *>> nfa_edges;
+        std::unordered_map<char, bool> accepting_edge;
 
         for (NFA::Node const *nfa_node : curr_node->nodes) {
             for (NFA::Node const *nbh : nfa_node->edges) {
                 nfa_edges[nbh->c].insert(nbh);
+                accepting_edge[nbh->c] |= nbh->end;
             }
         }
 
@@ -67,7 +66,7 @@ struct PowerDFA {
             auto result = all_nodes.find(nfa_nodes);
 
             if (result == all_nodes.end()) {
-                auto new_node = new TmpNode{std::move(nfa_nodes), {}};
+                auto new_node = new TmpNode{std::move(nfa_nodes), {}, accepting_edge[c]};
                 curr_node->edges[c] = new_node;
                 subset_construction(new_node, all_nodes);
             } else {

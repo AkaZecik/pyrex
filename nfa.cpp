@@ -16,10 +16,11 @@ struct NFA {
         std::set<Node *> edges;
         int id;
         char c;
+        bool end;
 
-        explicit Node(int id) : id(id), c{} {}
+        explicit Node(int id) : id(id), c{}, end{} {}
 
-        Node(int id, char c) : id(id), c(c) {}
+        Node(int id, char c) : id(id), c(c), end{} {}
     };
 
     Node start_node{0};
@@ -59,21 +60,10 @@ struct NFA {
         return *this;
     }
 
-    using AllEdges = std::unordered_map<
-        Node *,
-        std::unordered_map<char, std::vector<Node *>>
-    >;
-
-    AllEdges get_all_edges() {
-        AllEdges allEdges;
-
+    ~NFA() {
         for (auto node : all_nodes) {
-            for (auto nbh : node->edges) {
-                allEdges[node][nbh->c].push_back(nbh);
-            }
+            delete node;
         }
-
-        return allEdges;
     }
 
     static NFA for_nothing() {
@@ -96,7 +86,6 @@ struct NFA {
     }
 
     static NFA from_ast(::Node *node) {
-        // TODO: make as the only public method?
         switch (node->node_kind()) {
             case CHAR: {
                 auto c = reinterpret_cast<CharNode *>(node);
