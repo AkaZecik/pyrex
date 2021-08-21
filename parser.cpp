@@ -155,6 +155,7 @@ struct Parser {
                 throw std::runtime_error("Unclosed range operator");
             }
 
+            curr_pos += 1;
             interpret_operator(new PowerNode{std::stoi(num1)});
         }
     }

@@ -117,6 +117,26 @@ struct NFA {
                 auto star = reinterpret_cast<StarNode *>(node);
                 return std::move(from_ast(star->operand).star());
             }
+            case PLUS: {
+                auto plus = reinterpret_cast<PlusNode *>(node);
+                return std::move(from_ast(plus->operand).plus());
+            }
+            case POWER: {
+                auto power = reinterpret_cast<PowerNode *>(node);
+                return std::move(from_ast(power->operand).power(power->power));
+            }
+            case MIN: {
+                auto min = reinterpret_cast<MinNode *>(node);
+                return std::move(from_ast(min->operand).min(min->min));
+            }
+            case MAX: {
+                auto max = reinterpret_cast<MaxNode *>(node);
+                return std::move(from_ast(max->operand).max(max->max));
+            }
+            case RANGE: {
+                auto range = reinterpret_cast<RangeNode *>(node);
+                return std::move(from_ast(range->operand).range(range->min, range->max));
+            }
             case QMARK: {
                 auto qmark = reinterpret_cast<QMarkNode *>(node);
                 return std::move(from_ast(qmark->operand).qmark());
@@ -206,6 +226,11 @@ struct NFA {
 
     NFA &plus() {
         concatenate(std::move(NFA(*this).star()));
+        return *this;
+    }
+
+    NFA &power(int n) {
+        range(n, n);
         return *this;
     }
 

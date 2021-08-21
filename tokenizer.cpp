@@ -65,8 +65,14 @@ struct Tokenizer {
                 return Token(TokenType::LPAREN);
             case ')':
                 return Token(TokenType::RPAREN);
+            case '{':
+                return Token(TokenType::LCURLY);
+            case '}':
+                return Token(TokenType::RCURLY);
             case '*':
                 return Token(TokenType::STAR);
+            case '+':
+                return Token(TokenType::PLUS);
             case '|':
                 return Token(TokenType::UNION);
             case '?':
