@@ -25,23 +25,28 @@ void print_node(PowerDFA::TmpNode const &dfa_node) {
 }
 
 void print_dfa(PowerDFA const &dfa) {
-    std::cout << "(#) ";
-    print_node(dfa.start_node);
+    std::unordered_map<PowerDFA::TmpNode *, int> ids;
+    int i = 0;
+
+    for (auto node : dfa.all_nodes) {
+        ids[node] = ++i;
+    }
+
+    std::cout << "0 (#) {0} -> ";
 
     for (auto nbh : dfa.start_node.edges) {
-        std::cout << std::endl << "    -> ";
-        print_node(*nbh);
+        std::cout << ids[nbh] << ", ";
     }
 
     std::cout << std::endl;
 
     for (auto dfa_node : dfa.all_nodes) {
-        std::cout << "(" << dfa_node->c << ") ";
+        std::cout << ids[dfa_node] << " (" << dfa_node->c << ") ";
         print_node(*dfa_node);
+        std::cout << " -> ";
 
         for (auto nbh : dfa_node->edges) {
-            std::cout << std::endl << "    -> ";
-            print_node(*nbh);
+            std::cout << ids[nbh] << ", ";
         }
 
         std::cout << std::endl;
@@ -50,14 +55,12 @@ void print_dfa(PowerDFA const &dfa) {
     std::cout << "\nEND: ";
 
     if (dfa.start_node.accepting) {
-        print_node(dfa.start_node);
-        std::cout << ", ";
+        std::cout << "0, ";
     }
 
     for (auto node : dfa.all_nodes) {
         if (node->accepting) {
-            std::cout << std::endl << "    ->";
-            print_node(*node);
+            std::cout << ids[node] << ", ";
         }
     }
 
