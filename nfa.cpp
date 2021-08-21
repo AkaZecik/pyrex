@@ -88,7 +88,7 @@ struct NFA {
         return {};
     }
 
-     static NFA for_empty() {
+    static NFA for_empty() {
         NFA nfa;
         nfa.start_node.accepting = true;
         return nfa;
@@ -201,6 +201,40 @@ struct NFA {
 
         start_node.accepting = start_node.accepting || other.start_node.accepting;
         other.start_node.accepting = false;
+        return *this;
+    }
+
+    NFA &plus() {
+        concatenate(std::move(NFA(*this).star()));
+        return *this;
+    }
+
+    NFA &range(int min, int max) {
+        if (max == 0) {
+            *this = for_empty();
+            return *this;
+        }
+
+        if (min == 0) {
+            start_node.accepting = true;
+        }
+
+        if (max == 1) {
+            return *this;
+        }
+
+        std::vector<NFA> copies(max - 1, *this);
+
+        if (!start_node.accepting) {
+            for (int i = min - 1; i < max - 1; ++i) {
+                copies[i].start_node.accepting = true;
+            }
+        }
+
+        for (NFA &copy : copies) {
+            concatenate(std::move(copy));
+        }
+
         return *this;
     }
 };
