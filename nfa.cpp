@@ -30,7 +30,6 @@ struct NFA {
     NFA() = default;
 
     NFA(NFA const &other) {
-//        std::cout << "NFA(NFA const &)" << std::endl;
         start_node.accepting = other.start_node.accepting;
         std::unordered_map<Node const *, Node *> new_nodes;
         auto all_nodes_it = all_nodes.cbefore_begin();
@@ -62,7 +61,6 @@ struct NFA {
     }
 
     NFA(NFA &&other) noexcept: NFA() {
-//        std::cout << "NFA(NFA &&)" << std::endl;
         swap(*this, other);
     }
 
@@ -159,6 +157,7 @@ struct NFA {
     }
 
     NFA &star() {
+        // TODO: what about for_nothing().star()? is it for_nothing() or for_empty()?
         auto &first_pos = start_node.edges;
 
         for (auto end_node : end_nodes) {
@@ -266,10 +265,6 @@ struct NFA {
     NFA &min(int min) {
         if (min == 0) {
             star();
-            return *this;
-        }
-
-        if (min == 1) {
             return *this;
         }
 
