@@ -284,4 +284,30 @@ struct NFA {
     }
 };
 
+struct Match;
+struct IterMatch;
+
+struct Match {
+    std::string const text;
+    int start;
+    int end;
+
+    [[nodiscard]] std::string to_string() const {
+        return text.substr(start, end - start);
+    }
+};
+
+struct IterMatch {
+    std::string const text;
+    int start;
+    int end;
+    int pos = 0;
+
+    IterMatch(std::string text, int start, int end) : text(std::move(text)), start(start), end(end) {}
+
+    Match next() {
+
+    }
+};
+
 #endif // NFA_CPP
