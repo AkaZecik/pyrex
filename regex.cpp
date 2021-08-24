@@ -10,7 +10,7 @@
 #include <memory>
 #include "ast.cpp"
 #include <iostream>
-#include <forward_list>
+#include <list>
 #include <unordered_map>
 
 // DFA/NFA powinno zwracac iterator, na ktorym mozna wywolac metode .move(char)
@@ -23,20 +23,10 @@ class Regex {
             std::vector<Node *> edges;
             std::variant<std::monostate, char> edges_kind;
             bool accepting{false};
-
-            Node() {
-                counter += 1;
-                std::cout << "Node()\t" << counter << std::endl;
-            }
-
-            ~Node() {
-                counter -= 1;
-                std::cout << "~Node()\t" << counter << std::endl;
-            }
         };
 
         Node *start, *end;
-        std::forward_list<Node *> all_nodes;
+        std::list<Node *> all_nodes;
 
         NFA() : start(new Node()), end(new Node()) {
             all_nodes.push_front(end);
@@ -45,15 +35,15 @@ class Regex {
         };
 
         NFA(NFA const &other) {
+            // TODO: this variable would be useful in Regex
+            //  maybe two copy constructors, one providing reference to a map?
             std::unordered_map<NFA::Node *, NFA::Node *> new_nodes;
-            auto it = all_nodes.cbefore_begin();
 
             for (auto node : other.all_nodes) {
                 auto new_node = new NFA::Node();
                 new_node->accepting = node->accepting;
                 new_node->edges_kind = node->edges_kind;
-                all_nodes.emplace_after(it);
-                ++it;
+                all_nodes.push_back(new_node);
                 new_nodes[node] = new_node;
             }
 
@@ -68,6 +58,12 @@ class Regex {
         }
 
         NFA(NFA &&other) = default;
+
+        ~NFA() {
+            for (auto node : all_nodes) {
+                delete node;
+            }
+        }
 
         NFA from_ast(::Node *ast_node) {
         }
@@ -91,10 +87,7 @@ class Regex {
 
         static NFA for_concat(NFA left, NFA right) {
             left.end->edges.push_back(right.start);
-            right.all_nodes.splice_after(
-                right.all_nodes.cbefore_begin(),
-                left.all_nodes
-            );
+            left.all_nodes.splice(left.all_nodes.begin(), right.all_nodes);
             std::swap(left.all_nodes, right.all_nodes);
             left.end = right.end;
             right.start = left.start = nullptr;
@@ -107,7 +100,25 @@ class Regex {
             result.start->edges.push_back(right.start);
             left.end->edges.push_back(result.end);
             right.end->edges.push_back(result.end);
+            left.all_nodes.splice(left.all_nodes.end(), right.all_nodes);
+            result.all_nodes.splice(++result.all_nodes.cbegin(), left.all_nodes);
+            left.start = left.end = right.start = right.end = nullptr;
+            return result;
+        }
 
+        static NFA for_star(NFA nfa) {
+            NFA result;
+            nfa.end->edges.push_back(result.start);
+            result.start->edges.push_back(result.end);
+            result.end->edges.push_back(nfa.start);
+            result.all_nodes.splice(++result.all_nodes.begin(), nfa.all_nodes);
+            nfa.start = nfa.end = nullptr;
+            return result;
+        }
+
+        static NFA for_plus(NFA nfa) {
+            NFA star = for_star(nfa);
+            return for_concat(std::move(nfa), std::move(star));
         }
     };
 
