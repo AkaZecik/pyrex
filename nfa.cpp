@@ -268,7 +268,7 @@ struct NFA {
             return *this;
         }
 
-        std::vector<NFA> copies(min, *this);
+        std::vector<NFA> copies(min, *this); // TODO: is count correct?
         copies.back().star();
 
         for (NFA &copy : copies) {

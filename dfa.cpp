@@ -9,6 +9,11 @@
 #include <unordered_map>
 #include "nfa.cpp"
 
+/*
+ * gdybysmy chcieli, zeby algo dzialalo na tej formie NFA i DFA, to musielibysmy
+ * trzymac informacje na krawedziach (DFA), a nie na stanach (DFA)
+ */
+
 struct PowerDFA {
     struct TmpNode {
         std::set<NFA::Node const *> nodes;

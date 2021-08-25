@@ -14,8 +14,8 @@
 #include <unordered_map>
 
 // DFA/NFA powinno zwracac iterator, na ktorym mozna wywolac metode .move(char)
-
-int counter = 0;
+// zapytac sie czy jest to stan koncowy, etc.
+// Takie rozwlekle NFA da sie narysowac planarnie.
 
 class Regex {
     struct NFA {
@@ -32,7 +32,7 @@ class Regex {
             all_nodes.push_front(end);
             all_nodes.push_front(start);
             end->accepting = true;
-        };
+        }
 
         NFA(NFA const &other) {
             // TODO: this variable would be useful in Regex
@@ -58,6 +58,8 @@ class Regex {
         }
 
         NFA(NFA &&other) = default;
+        NFA &operator=(NFA const &) = default;
+        NFA &operator=(NFA &&) = default;
 
         ~NFA() {
             for (auto node : all_nodes) {
@@ -65,8 +67,7 @@ class Regex {
             }
         }
 
-        NFA from_ast(::Node *ast_node) {
-        }
+        NFA from_ast(::Node *ast_node) {}
 
         static NFA for_nothing() {
             return {};
@@ -120,6 +121,58 @@ class Regex {
             NFA star = for_star(nfa);
             return for_concat(std::move(nfa), std::move(star));
         }
+
+        static NFA for_qmark(NFA nfa) {
+            return for_union(std::move(nfa), for_empty());
+        }
+
+        static NFA for_power(NFA nfa, int power) {
+            return for_range(std::move(nfa), power, power);
+        }
+
+        static NFA for_min(NFA nfa, int min) {
+            if (min == 0) {
+                return for_star(std::move(nfa));
+            }
+
+            NFA star = for_star(nfa);
+            return for_concat(for_power(std::move(nfa), min), star);
+        }
+
+        static NFA for_max(NFA nfa, int max) {
+            return for_range(std::move(nfa), 0, max);
+        }
+
+        static NFA for_range(NFA nfa, int min, int max) {
+            if (max == 0) {
+                // TODO: is it OK that we are loosing information?
+                //  what about regex (hello){0,0} and groups collected before?
+                //  should they be removed?
+                return for_empty();
+            }
+
+            std::vector<NFA> copies(max - 1, nfa);
+            copies.push_back(std::move(nfa));
+
+            for (int i = min; i < max; ++i) {
+                copies[i] = for_union(std::move(copies[i]), for_empty());
+            }
+
+            while (copies.size() != 1) {
+                copies[0] = for_concat(std::move(copies[0]), std::move(copies.back()));
+            }
+
+            return std::move(copies.back());
+        }
+
+        static NFA for_group(NFA nfa) {
+            NFA result;
+            result.start->edges.push_back(nfa.start);
+            nfa.end->edges.push_back(result.end);
+            result.all_nodes.splice(++result.all_nodes.begin(), nfa.all_nodes);
+            nfa.start = nfa.end = nullptr;
+            return result;
+        }
     };
 
     // TODO: should return Regex?
@@ -129,6 +182,9 @@ class Regex {
     struct DFA {
 
     };
+
+    // zrobic -> Regex &Regex::concat(Regex other);
+    // oraz -> static Regex Regex::concat(Regex left, Regex right);
 };
 
 #endif
