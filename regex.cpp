@@ -183,8 +183,16 @@ class Regex {
 
     };
 
-    // zrobic -> Regex &Regex::concat(Regex other);
-    // oraz -> static Regex Regex::concat(Regex left, Regex right);
+    Regex &concat(Regex other) {
+        nfa = NFA::for_concat(std::move(nfa), std::move(other.nfa));
+        return *this;
+    }
+
+    static Regex concat(Regex left, Regex right) {
+        return left.concat(std::move(right));
+    }
+
+    NFA nfa;
 };
 
 #endif
