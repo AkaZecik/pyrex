@@ -17,6 +17,11 @@
 // zapytac sie czy jest to stan koncowy, etc.
 // Takie rozwlekle NFA da sie narysowac planarnie.
 
+// Stan w DFA moze przechowywac zbior/liste wierzcholkow NFA, ktore mu odpowiadaja
+// Wtedy gdy bedziemy chcieli sie zapytac o matche na przedziale start,end, bedzie
+// mozna po prostu przesymulowac DFA do pozycji start, popatrzyc sie na stany NFA mu
+// odpowiadajace i od nich zaczac. Zlozonosc wtedy to O(start) + O(czas_duzy(text.size-start))
+
 class Regex {
     struct NFA {
         struct Node {
@@ -65,9 +70,18 @@ class Regex {
             for (auto node : all_nodes) {
                 delete node;
             }
+
+            all_nodes.resize(0);
+            start = end = nullptr;
         }
 
-        NFA from_ast(::Node *ast_node) {}
+        NFA from_ast(::Node *ast_node) {
+            // TODO: mozna (chyba) zoptymalizowac "star" zlozony R***
+            //  ale tylko jezeli nie jest przeplatany grupami ((R**)**)**
+            // TODO: podobnie chyba da sie zoptymalizowac R? (markowanie startu jako akceptujacy)
+            //  oraz sama w sobie grupe (nie tworzymy wierzcholkow tylko zapamietujemy start i end
+            //  oraz concat (faktycznie sklejamy end lewego i start prawego)
+        }
 
         static NFA for_nothing() {
             return {};
@@ -123,6 +137,7 @@ class Regex {
         }
 
         static NFA for_qmark(NFA nfa) {
+            // TODO: perhaps optimizable by setting "accepting" on the nfa.start
             return for_union(std::move(nfa), for_empty());
         }
 
