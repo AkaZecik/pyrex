@@ -79,8 +79,9 @@ class Regex {
             // TODO: mozna (chyba) zoptymalizowac "star" zlozony R***
             //  ale tylko jezeli nie jest przeplatany grupami ((R**)**)**
             // TODO: podobnie chyba da sie zoptymalizowac R? (markowanie startu jako akceptujacy)
-            //  oraz sama w sobie grupe (nie tworzymy wierzcholkow tylko zapamietujemy start i end
+            //  oraz sama w sobie grupe (nie tworzymy wierzcholkow tylko zapamietujemy start i end)
             //  oraz concat (faktycznie sklejamy end lewego i start prawego)
+            // TODO: a co z R*???**?*??**?
         }
 
         static NFA for_nothing() {
