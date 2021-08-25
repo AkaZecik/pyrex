@@ -82,6 +82,15 @@ class Regex {
             //  oraz sama w sobie grupe (nie tworzymy wierzcholkow tylko zapamietujemy start i end)
             //  oraz concat (faktycznie sklejamy end lewego i start prawego)
             // TODO: a co z R*???**?*??**?
+            // TODO: da sie zoptymalizowac skladanie grup, gwiazdek, pytajnikow,
+            //  gwiazdek z pytajnikami, plusa i gwiazdki, range i gwiazdki, etc.
+            //
+            // TODO: grupe srednio mozna tak zoptymalizowac dla gwiazdki,
+            //  bo (R*) sie psuje
+
+            // Niezmiennik: do kazdego wierzcholka, ktory byl kiedykolwiek wierzcholkiem
+            // "start", wchodzi max jedna krawedz. Z wyjatkiem gwiazdki w mojej implementacji :thinking:
+            // Moze gwiazdke zrobic. Raczej sie nic nie da z tym zrobic, bo gwiazdka...
         }
 
         static NFA for_nothing() {
