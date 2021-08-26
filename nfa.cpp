@@ -208,7 +208,6 @@ struct NFA {
 
     NFA &star() {
         for (auto lastpos_node : lastpos) {
-            // what if lastpos_node is start_node?
             auto const &empty_edge_tokens = std::get<GroupToTokens>(
                 lastpos_node->empty_edge);
             auto edge_it = lastpos_node->edges.begin();
@@ -243,42 +242,64 @@ struct NFA {
     }
 
     NFA &concatenate(NFA other) {
-//        auto other_empty_tokens = std::get_if<GroupToTokens>(
-//            &other.start_node.empty_edge);
+        auto empty_left =std::get_if<GroupToTokens>(&start_node.empty_edge);
+        auto empty_right =std::get_if<GroupToTokens>(&other.start_node.empty_edge);
+
+//        auto connect_to_other = [&other](NFA::Node *node) {
+//            auto const &empty_edge = std::get<GroupToTokens>(node->empty_edge);
+//
+//            for (auto const &[nbh, tokens] : other.start_node.edges) {
+//                GroupToTokens new_tokens(empty_edge);
+//                new_tokens.insert(tokens.begin(), tokens.end());
+//                node->edges.emplace(nbh, std::move(new_tokens));
+//            }
+//        };
 
         for (auto lastpos_node : lastpos) {
-            auto const &empty_edge_tokens = std::get<GroupToTokens>(
+            auto const &empty_lastpos = std::get<GroupToTokens>(
                 lastpos_node->empty_edge);
 
             for (auto const &[nbh, tokens] : other.start_node.edges) {
-                GroupToTokens new_tokens(empty_edge_tokens);
+                GroupToTokens new_tokens(empty_lastpos);
                 new_tokens.insert(tokens.begin(), tokens.end());
                 lastpos_node->edges.emplace(nbh, std::move(new_tokens));
             }
-
-//            if (other_empty_tokens) {
-//                std::get<GroupToTokens>(lastpos_node->empty_edge)
-//                    .insert(other_empty_tokens->begin(), other_empty_tokens->end());
-//            }
         }
 
-        for (auto lastpos_node : lastpos) {
-            lastpos_node->empty_edge.emplace<std::monostate>();
-        }
-
-        if (auto ptr = std::get_if<GroupToTokens>(&start_node.empty_edge)) {
+        if (empty_left) {
             for (auto const &[nbh, tokens] : other.start_node.edges) {
-                GroupToTokens new_tokens(*ptr);
+                GroupToTokens new_tokens(*empty_left);
                 new_tokens.insert(tokens.begin(), tokens.end());
                 start_node.edges.emplace(nbh, std::move(new_tokens));
             }
+        }
 
+        if (empty_right) {
+            for (auto lastpos_node : lastpos) {
+                std::get<GroupToTokens>(lastpos_node->empty_edge).insert(
+                    empty_right->begin(), empty_right->end()
+                );
+            }
+
+            lastpos.splice(lastpos.cend(), other.lastpos);
+        } else {
+            for (auto lastpos_node : lastpos) {
+                lastpos_node->empty_edge.emplace<std::monostate>();
+            }
+
+            std::swap(lastpos, other.lastpos);
+            other.lastpos.clear();
+        }
+
+        if (empty_left && empty_right) {
+            empty_left->merge(*empty_right);
+        } else {
             start_node.empty_edge.emplace<std::monostate>();
         }
 
-        all_nodes.splice(all_nodes.end(), other.all_nodes);
+        all_nodes.splice(all_nodes.cend(), other.all_nodes);
         other.start_node.edges.clear();
-        other.lastpos.clear();
+        other.start_node.empty_edge.emplace<std::monostate>();
 
         /////////////////////////////////////////
 
