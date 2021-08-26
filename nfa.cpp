@@ -42,12 +42,13 @@ enum class GroupToken {
 std::list<Group> groups;
 
 struct NFA {
-    typedef std::unordered_map<Group *, std::vector<GroupToken>> GroupsTokens;
+    // TODO: maybe make the value an encapsulated 2-element array?
+    typedef std::unordered_map<Group *, std::vector<GroupToken>> GroupToTokens;
     struct Node;
 
     struct Node {
-        std::map<Node *, GroupsTokens> edges;
-        std::variant<std::monostate, GroupsTokens> empty_edge;
+        std::map<Node *, GroupToTokens> edges;
+        std::variant<std::monostate, GroupToTokens> empty_edge;
         int id;
         char c;
 
@@ -58,7 +59,7 @@ struct NFA {
 
     Node start_node{0};
     std::list<Node *> all_nodes;
-    std::list<Node *> lastpos;
+    std::list<Node *> lastpos;  // Maybe it should hold only internal nodes, not start?
 
     NFA() = default;
 
@@ -169,17 +170,17 @@ struct NFA {
 
     static NFA for_empty() {
         NFA nfa;
-        nfa.start_node.empty_edge.emplace<GroupsTokens>();
-        nfa.lastpos.push_front(&nfa.start_node);
+        nfa.start_node.empty_edge.emplace<GroupToTokens>();
+//        nfa.lastpos.push_back(&nfa.start_node);
         return nfa;
     }
 
     static NFA for_char(int id, char c) {
         NFA nfa;
         auto node = new Node(id, c);
-        node->empty_edge.emplace<GroupsTokens>();
-        nfa.all_nodes.push_front(node);
-        nfa.lastpos.push_front(node);
+        node->empty_edge.emplace<GroupToTokens>();
+        nfa.all_nodes.push_back(node);
+        nfa.lastpos.push_back(node);
         return nfa;
     }
 
@@ -187,7 +188,7 @@ struct NFA {
     NFA &for_group() {
         groups.push_back({}); // TODO: PLACEHOLDER
 
-        if (auto empty_edge = std::get_if<GroupsTokens>(&start_node.empty_edge)) {
+        if (auto empty_edge = std::get_if<GroupToTokens>(&start_node.empty_edge)) {
             auto &tokens = (*empty_edge)[&groups.back()];
             tokens.push_back(GroupToken::ENTER);
             tokens.push_back(GroupToken::LEAVE);
@@ -198,7 +199,7 @@ struct NFA {
         }
 
         for (auto lastpos_node : lastpos) {
-            std::get<GroupsTokens>(lastpos_node->empty_edge)[&groups.back()]
+            std::get<GroupToTokens>(lastpos_node->empty_edge)[&groups.back()]
                 .push_back(GroupToken::LEAVE);
         }
 
@@ -207,7 +208,8 @@ struct NFA {
 
     NFA &star() {
         for (auto lastpos_node : lastpos) {
-            auto const &empty_edge_tokens = std::get<GroupsTokens>(
+            // what if lastpos_node is start_node?
+            auto const &empty_edge_tokens = std::get<GroupToTokens>(
                 lastpos_node->empty_edge);
             auto edge_it = lastpos_node->edges.begin();
 
@@ -226,7 +228,7 @@ struct NFA {
         }
 
         if (std::holds_alternative<std::monostate>(start_node.empty_edge)) {
-            start_node.empty_edge.emplace<GroupsTokens>();
+            start_node.empty_edge.emplace<GroupToTokens>();
         }
 
         return *this;
@@ -234,21 +236,42 @@ struct NFA {
 
     NFA &qmark() {
         if (std::holds_alternative<std::monostate>(start_node.empty_edge)) {
-            start_node.empty_edge.emplace<GroupsTokens>();
+            start_node.empty_edge.emplace<GroupToTokens>();
         }
 
         return *this;
     }
 
     NFA &concatenate(NFA other) {
+//        auto other_empty_tokens = std::get_if<GroupToTokens>(
+//            &other.start_node.empty_edge);
+
         for (auto lastpos_node : lastpos) {
-            auto const &empty_edge_tokens = std::get<GroupsTokens>(
+            auto const &empty_edge_tokens = std::get<GroupToTokens>(
                 lastpos_node->empty_edge);
 
-            for () {
-
+            for (auto const &[nbh, tokens] : other.start_node.edges) {
+                GroupToTokens new_tokens(empty_edge_tokens);
+                new_tokens.insert(tokens.begin(), tokens.end());
+                lastpos_node->edges.emplace(nbh, std::move(new_tokens));
             }
+
+//            if (other_empty_tokens) {
+//                std::get<GroupToTokens>(lastpos_node->empty_edge)
+//                    .insert(other_empty_tokens->begin(), other_empty_tokens->end());
+//            }
         }
+
+        for (auto lastpos_node : lastpos) {
+            lastpos_node->empty_edge.emplace<std::monostate>();
+        }
+
+        all_nodes.splice(all_nodes.end(), other.all_nodes);
+        other.start_node.edges.clear();
+
+        /////////////////////////////////////////
+
+        all_nodes.splice(all_nodes.end(), other.all_nodes);
 
         auto &other_first_pos = other.start_node.edges;
 
