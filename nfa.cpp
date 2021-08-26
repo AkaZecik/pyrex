@@ -184,50 +184,36 @@ struct NFA {
         return nfa;
     }
 
-    // TODO: named vs. numbered group vs. unnamed
-    NFA &for_group() {
-        groups.push_back({}); // TODO: PLACEHOLDER
+    NFA &for_non_capturing_group() {
+        return *this;
+    }
 
+    NFA &for_numbered_group() {
+        Group *named_group = nullptr; // TODO
+        for_group(named_group);
+        return *this;
+    }
+
+    NFA &for_named_group() {
+        Group *named_group = nullptr; // TODO
+        for_group(named_group);
+        return *this;
+    }
+
+    NFA &for_group(Group *group) {
         if (auto empty_edge = std::get_if<GroupToTokens>(&start_node.empty_edge)) {
-            auto &tokens = (*empty_edge)[&groups.back()];
+            auto &tokens = (*empty_edge)[group];
             tokens.push_back(GroupToken::ENTER);
             tokens.push_back(GroupToken::LEAVE);
         }
 
         for (auto &[_, tokens] : start_node.edges) {
-            tokens[&groups.back()].push_back(GroupToken::ENTER);
+            tokens[group].push_back(GroupToken::ENTER);
         }
 
         for (auto lastpos_node : lastpos) {
-            std::get<GroupToTokens>(lastpos_node->empty_edge)[&groups.back()]
+            std::get<GroupToTokens>(lastpos_node->empty_edge)[group]
                 .push_back(GroupToken::LEAVE);
-        }
-
-        return *this;
-    }
-
-    NFA &star() {
-        for (auto lastpos_node : lastpos) {
-            auto const &empty_edge_tokens = std::get<GroupToTokens>(
-                lastpos_node->empty_edge);
-            auto edge_it = lastpos_node->edges.begin();
-
-            for (auto &[firstpos_node, firstpos_tokens] : start_node.edges) {
-                while (edge_it != lastpos_node->edges.end() &&
-                       edge_it->first <= firstpos_node) {
-                    ++edge_it;
-                }
-
-                if (edge_it != lastpos_node->edges.end()) {
-                    lastpos_node->edges.emplace_hint(
-                        edge_it, firstpos_node, empty_edge_tokens
-                    );
-                }
-            }
-        }
-
-        if (std::holds_alternative<std::monostate>(start_node.empty_edge)) {
-            start_node.empty_edge.emplace<GroupToTokens>();
         }
 
         return *this;
@@ -242,36 +228,25 @@ struct NFA {
     }
 
     NFA &concatenate(NFA other) {
-        auto empty_left =std::get_if<GroupToTokens>(&start_node.empty_edge);
-        auto empty_right =std::get_if<GroupToTokens>(&other.start_node.empty_edge);
+        auto empty_left = std::get_if<GroupToTokens>(&start_node.empty_edge);
+        auto empty_right = std::get_if<GroupToTokens>(&other.start_node.empty_edge);
 
-//        auto connect_to_other = [&other](NFA::Node *node) {
-//            auto const &empty_edge = std::get<GroupToTokens>(node->empty_edge);
-//
-//            for (auto const &[nbh, tokens] : other.start_node.edges) {
-//                GroupToTokens new_tokens(empty_edge);
-//                new_tokens.insert(tokens.begin(), tokens.end());
-//                node->edges.emplace(nbh, std::move(new_tokens));
-//            }
-//        };
-
-        for (auto lastpos_node : lastpos) {
-            auto const &empty_lastpos = std::get<GroupToTokens>(
-                lastpos_node->empty_edge);
+        auto connect_to_other = [&other](NFA::Node *node) {
+            auto const &empty_edge = std::get<GroupToTokens>(node->empty_edge);
 
             for (auto const &[nbh, tokens] : other.start_node.edges) {
-                GroupToTokens new_tokens(empty_lastpos);
+                GroupToTokens new_tokens(empty_edge);
                 new_tokens.insert(tokens.begin(), tokens.end());
-                lastpos_node->edges.emplace(nbh, std::move(new_tokens));
+                node->edges.emplace(nbh, std::move(new_tokens));
             }
+        };
+
+        for (auto lastpos_node : lastpos) {
+            connect_to_other(lastpos_node);
         }
 
         if (empty_left) {
-            for (auto const &[nbh, tokens] : other.start_node.edges) {
-                GroupToTokens new_tokens(*empty_left);
-                new_tokens.insert(tokens.begin(), tokens.end());
-                start_node.edges.emplace(nbh, std::move(new_tokens));
-            }
+            connect_to_other(&start_node);
         }
 
         if (empty_right) {
@@ -300,57 +275,51 @@ struct NFA {
         all_nodes.splice(all_nodes.cend(), other.all_nodes);
         other.start_node.edges.clear();
         other.start_node.empty_edge.emplace<std::monostate>();
-
-        /////////////////////////////////////////
-
-        all_nodes.splice(all_nodes.end(), other.all_nodes);
-
-        auto &other_first_pos = other.start_node.edges;
-
-        for (auto end_node : end_nodes) {
-            end_node->edges.insert(other_first_pos.begin(), other_first_pos.end());
-        }
-
-        if (other.start_node.accepting) {
-            other.end_nodes.splice_after(other.end_nodes.cbefore_begin(), end_nodes);
-        } else {
-            for (auto node : end_nodes) {
-                node->accepting = false;
-            }
-        }
-
-        std::swap(end_nodes, other.end_nodes);
-
-        if (start_node.accepting) {
-            start_node.edges.insert(other_first_pos.begin(), other_first_pos.end());
-        }
-
-        other.all_nodes.splice_after(other.all_nodes.cbefore_begin(), all_nodes);
-        std::swap(all_nodes, other.all_nodes);
-        start_node.accepting = start_node.accepting && other.start_node.accepting;
-
-        other.start_node.edges.clear();
-        other.start_node.accepting = false;
-        other.all_nodes.resize(0);
-        other.end_nodes.resize(0);
         return *this;
     }
 
-    NFA &union_(NFA &&other) {
-        start_node.edges.insert(
-            other.start_node.edges.begin(),
-            other.start_node.edges.end()
-        );
+    NFA &union_(NFA other) {
+        auto empty_left = std::get_if<GroupToTokens>(&start_node.empty_edge);
+        auto empty_right = std::get_if<GroupToTokens>(&other.start_node.empty_edge);
+        start_node.edges.merge(other.start_node.edges);
+
+        if (empty_right) {
+            if (empty_left) {
+                empty_left->merge(*empty_right);
+            } else {
+                start_node.empty_edge = *empty_right;
+            }
+        }
+
+        lastpos.splice(lastpos.cend(), other.lastpos);
         other.start_node.edges.clear();
+        other.start_node.empty_edge.emplace<std::monostate>();
+        return *this;
+    }
 
-        other.all_nodes.splice_after(other.all_nodes.cbefore_begin(), all_nodes);
-        std::swap(all_nodes, other.all_nodes);
+    NFA &star() {
+        for (auto lastpos_node : lastpos) {
+            auto const &empty_edge = std::get<GroupToTokens>(lastpos_node->empty_edge);
+            auto edge_it = lastpos_node->edges.begin();
 
-        other.end_nodes.splice_after(other.end_nodes.cbefore_begin(), end_nodes);
-        std::swap(end_nodes, other.end_nodes);
+            for (auto &[firstpos_node, firstpos_tokens] : start_node.edges) {
+                while (edge_it != lastpos_node->edges.end() &&
+                edge_it->first <= firstpos_node) {
+                    ++edge_it;
+                }
 
-        start_node.accepting = start_node.accepting || other.start_node.accepting;
-        other.start_node.accepting = false;
+                if (edge_it != lastpos_node->edges.end()) {
+                    lastpos_node->edges.emplace_hint(
+                        edge_it, firstpos_node, empty_edge
+                        );
+                }
+            }
+        }
+
+        if (std::holds_alternative<std::monostate>(start_node.empty_edge)) {
+            start_node.empty_edge.emplace<GroupToTokens>();
+        }
+
         return *this;
     }
 
@@ -371,7 +340,9 @@ struct NFA {
         }
 
         if (min == 0) {
-            start_node.accepting = true;
+            if (std::holds_alternative<std::monostate>(start_node.empty_edge)) {
+                start_node.empty_edge.emplace<GroupToTokens>();
+            }
         }
 
         if (max == 1) {
@@ -380,9 +351,9 @@ struct NFA {
 
         std::vector<NFA> copies(max - 1, *this);
 
-        if (!start_node.accepting) {
+        if (std::holds_alternative<std::monostate>(start_node.empty_edge)) {
             for (int i = min - 1; i < max - 1; ++i) {
-                copies[i].start_node.accepting = true;
+                copies[i].start_node.empty_edge.emplace<GroupToTokens>();
             }
         }
 
