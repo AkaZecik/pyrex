@@ -266,8 +266,19 @@ struct NFA {
             lastpos_node->empty_edge.emplace<std::monostate>();
         }
 
+        if (auto ptr = std::get_if<GroupToTokens>(&start_node.empty_edge)) {
+            for (auto const &[nbh, tokens] : other.start_node.edges) {
+                GroupToTokens new_tokens(*ptr);
+                new_tokens.insert(tokens.begin(), tokens.end());
+                start_node.edges.emplace(nbh, std::move(new_tokens));
+            }
+
+            start_node.empty_edge.emplace<std::monostate>();
+        }
+
         all_nodes.splice(all_nodes.end(), other.all_nodes);
         other.start_node.edges.clear();
+        other.lastpos.clear();
 
         /////////////////////////////////////////
 
