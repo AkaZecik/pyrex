@@ -44,7 +44,6 @@ std::list<Group> groups;
 struct NFA {
     // TODO: maybe make the value an encapsulated 2-element array?
     typedef std::unordered_map<Group *, std::vector<GroupToken>> GroupToTokens;
-    struct Node;
 
     struct Node {
         std::map<Node *, GroupToTokens> edges;
@@ -64,34 +63,30 @@ struct NFA {
     NFA() = default;
 
     NFA(NFA const &other) {
-//        start_node.accepting = other.start_node.accepting;
-//        std::unordered_map<Node const *, Node *> new_nodes;
-//        auto all_nodes_it = all_nodes.cbefore_begin();
-//        auto end_nodes_it = end_nodes.cbefore_begin();
-//
-//        for (auto node : other.all_nodes) {
-//            auto new_node = new Node(node->id, node->c, node->accepting);
-//            new_nodes[node] = new_node;
-//            all_nodes.insert_after(all_nodes_it, new_node);
-//            ++all_nodes_it;
-//
-//            if (node->accepting) {
-//                end_nodes.insert_after(end_nodes_it, new_node);
-//                ++end_nodes_it;
-//            }
-//        }
-//
-//        for (auto nbh : other.start_node.edges) {
-//            start_node.edges.insert(new_nodes[nbh]);
-//        }
-//
-//        for (auto node : other.all_nodes) {
-//            auto curr_node = new_nodes[node];
-//
-//            for (auto nbh : node->edges) {
-//                curr_node->edges.insert(new_nodes[nbh]);
-//            }
-//        }
+        std::unordered_map<Node const *, Node *> new_nodes;
+
+        for (auto orig_node : other.all_nodes) {
+            auto new_node = new Node(orig_node->id, orig_node->c);
+            all_nodes.push_back(new_node);
+
+            if (std::holds_alternative<GroupToTokens>(orig_node->empty_edge)) {
+                lastpos.push_back(new_node);
+            }
+        }
+
+        for (auto [orig_node, new_node] : new_nodes) {
+            new_node->empty_edge = orig_node->empty_edge;
+
+            for (auto &[nbh, tokens] : orig_node->edges) {
+                new_node->edges[new_nodes[nbh]] = tokens;
+            }
+        }
+
+        start_node.empty_edge = other.start_node.empty_edge;
+
+        for (auto &[nbh, tokens] : other.start_node.edges) {
+            start_node.edges[new_nodes[nbh]] = tokens;
+        }
     }
 
     NFA(NFA &&other) = default;
@@ -116,7 +111,7 @@ struct NFA {
             }
             case GROUP: {
                 auto group = reinterpret_cast<GroupNode *>(node);
-                return from_ast(group->operand);
+                return std::move(from_ast(group->operand).for_named_group());
             }
             case STAR: {
                 auto star = reinterpret_cast<StarNode *>(node);
@@ -236,7 +231,7 @@ struct NFA {
 
             for (auto const &[nbh, tokens] : other.start_node.edges) {
                 GroupToTokens new_tokens(empty_edge);
-                new_tokens.insert(tokens.begin(), tokens.end());
+                new_tokens.insert(tokens.cbegin(), tokens.cend());
                 node->edges.emplace(nbh, std::move(new_tokens));
             }
         };
@@ -252,7 +247,7 @@ struct NFA {
         if (empty_right) {
             for (auto lastpos_node : lastpos) {
                 std::get<GroupToTokens>(lastpos_node->empty_edge).insert(
-                    empty_right->begin(), empty_right->end()
+                    empty_right->cbegin(), empty_right->cend()
                 );
             }
 
@@ -304,14 +299,16 @@ struct NFA {
 
             for (auto &[firstpos_node, firstpos_tokens] : start_node.edges) {
                 while (edge_it != lastpos_node->edges.end() &&
-                edge_it->first <= firstpos_node) {
+                       edge_it->first <= firstpos_node) {
                     ++edge_it;
                 }
 
                 if (edge_it != lastpos_node->edges.end()) {
+                    GroupToTokens new_tokens(empty_edge);
+                    new_tokens.insert(firstpos_tokens.cbegin(), firstpos_tokens.cend());
                     lastpos_node->edges.emplace_hint(
-                        edge_it, firstpos_node, empty_edge
-                        );
+                        edge_it, firstpos_node, std::move(new_tokens)
+                    );
                 }
             }
         }
