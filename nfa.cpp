@@ -7,6 +7,7 @@
 
 #include <set>
 #include <list>
+#include <map>
 #include <unordered_map>
 #include <variant>
 #include "ast.cpp"
@@ -31,46 +32,22 @@
  */
 
 struct Group {
+    Node *node = nullptr; // pointer to AST tree node
 };
 
 enum class GroupToken {
     ENTER, LEAVE,
 };
 
-std::vector<Group> groups;
+std::list<Group> groups;
 
 struct NFA {
     typedef std::unordered_map<Group *, std::vector<GroupToken>> GroupsTokens;
     struct Node;
 
-    struct Edge {
-        Node *nbh;
-        GroupsTokens groups;
-
-        friend bool operator==(Edge const &l, Edge const &r) {
-            return l.nbh == r.nbh;
-        }
-
-        friend bool operator<=(Edge const &l, Edge const &r) {
-            return l.nbh <= r.nbh;
-        }
-
-        friend bool operator<(Edge const &l, Edge const &r) {
-            return l.nbh < r.nbh;
-        }
-
-        friend bool operator<(Edge const &l, Node const *r) {
-            return l.nbh < r;
-        }
-
-        friend bool operator<(Node const *l, Edge const &r) {
-            return l < r.nbh;
-        }
-    };
-
     struct Node {
-        std::set<Edge, std::less<>> edges;
-        std::variant<std::monostate, Edge> empty_edge;
+        std::map<Node *, GroupsTokens> edges;
+        std::variant<std::monostate, GroupsTokens> empty_edge;
         int id;
         char c;
 
@@ -80,7 +57,6 @@ struct NFA {
     };
 
     Node start_node{0};
-    Node end_node{0};
     std::list<Node *> all_nodes;
     std::list<Node *> lastpos;
 
@@ -128,26 +104,6 @@ struct NFA {
         for (auto node : all_nodes) {
             delete node;
         }
-    }
-
-    static NFA for_nothing() {
-        return {};
-    }
-
-    static NFA for_empty() {
-        NFA nfa;
-        nfa.start_node.empty_edge = Edge{&nfa.end_node};
-        nfa.lastpos.push_front(&nfa.start_node);
-        return nfa;
-    }
-
-    static NFA for_char(int id, char c) {
-        NFA nfa;
-        auto node = new Node(id, c);
-        node->empty_edge = Edge{node};
-        nfa.all_nodes.push_front(node);
-        nfa.lastpos.push_front(node);
-        return nfa;
     }
 
     static NFA from_ast(::Node *node) {
@@ -207,31 +163,70 @@ struct NFA {
         }
     }
 
+    static NFA for_nothing() {
+        return {};
+    }
+
+    static NFA for_empty() {
+        NFA nfa;
+        nfa.start_node.empty_edge.emplace<GroupsTokens>();
+        nfa.lastpos.push_front(&nfa.start_node);
+        return nfa;
+    }
+
+    static NFA for_char(int id, char c) {
+        NFA nfa;
+        auto node = new Node(id, c);
+        node->empty_edge.emplace<GroupsTokens>();
+        nfa.all_nodes.push_front(node);
+        nfa.lastpos.push_front(node);
+        return nfa;
+    }
+
+    // TODO: named vs. numbered group vs. unnamed
     NFA &for_group() {
+        groups.push_back({}); // TODO: PLACEHOLDER
+
+        if (auto empty_edge = std::get_if<GroupsTokens>(&start_node.empty_edge)) {
+            auto &tokens = (*empty_edge)[&groups.back()];
+            tokens.push_back(GroupToken::ENTER);
+            tokens.push_back(GroupToken::LEAVE);
+        }
+
+        for (auto &[_, tokens] : start_node.edges) {
+            tokens[&groups.back()].push_back(GroupToken::ENTER);
+        }
+
+        for (auto lastpos_node : lastpos) {
+            std::get<GroupsTokens>(lastpos_node->empty_edge)[&groups.back()]
+                .push_back(GroupToken::LEAVE);
+        }
 
         return *this;
     }
 
     NFA &star() {
         for (auto lastpos_node : lastpos) {
-            auto &empty_edge = std::get<Edge>(lastpos_node->empty_edge);
+            auto const &empty_edge_tokens = std::get<GroupsTokens>(
+                lastpos_node->empty_edge);
             auto edge_it = lastpos_node->edges.begin();
 
-            for (auto &start_edge : start_node.edges) {
-                while (edge_it != lastpos_node->edges.end() && *edge_it <= start_edge) {
+            for (auto &[firstpos_node, firstpos_tokens] : start_node.edges) {
+                while (edge_it != lastpos_node->edges.end() &&
+                       edge_it->first <= firstpos_node) {
                     ++edge_it;
                 }
 
                 if (edge_it != lastpos_node->edges.end()) {
-                    lastpos_node->edges.insert(
-                        edge_it,{start_edge.nbh, empty_edge.groups}
+                    lastpos_node->edges.emplace_hint(
+                        edge_it, firstpos_node, empty_edge_tokens
                     );
                 }
             }
         }
 
         if (std::holds_alternative<std::monostate>(start_node.empty_edge)) {
-            start_node.empty_edge = Edge{&end_node};
+            start_node.empty_edge.emplace<GroupsTokens>();
         }
 
         return *this;
@@ -239,7 +234,7 @@ struct NFA {
 
     NFA &qmark() {
         if (std::holds_alternative<std::monostate>(start_node.empty_edge)) {
-            start_node.empty_edge = Edge{&end_node};
+            start_node.empty_edge.emplace<GroupsTokens>();
         }
 
         return *this;
@@ -247,7 +242,12 @@ struct NFA {
 
     NFA &concatenate(NFA other) {
         for (auto lastpos_node : lastpos) {
-            for ()
+            auto const &empty_edge_tokens = std::get<GroupsTokens>(
+                lastpos_node->empty_edge);
+
+            for () {
+
+            }
         }
 
         auto &other_first_pos = other.start_node.edges;
