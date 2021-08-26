@@ -6,73 +6,121 @@
 #define NFA_CPP
 
 #include <set>
-#include <forward_list>
+#include <list>
 #include <unordered_map>
+#include <variant>
 #include "ast.cpp"
 
+/*
+ * Alphabet mozna zrobic tak, ze jest klasa Char, ktora ma w sobie std::variant
+ * dla monostate, char, range, charset, etc.
+ *
+ * mozna optymalizowac tak, ze jak mamy pionki chodzace po NFA,
+ * to i tak rownolegle chodzimy po DFA. Jak dojdziemy do pozycji "end" w stringu
+ * to przestajemy zapamietywac nowe substringi, ale dalej pamietamy pionki, ktore
+ * chodzily po NFA, z tym, ze juz nie tworzymy nowych pionkow, a te ktore znikly
+ * po prostu znikly. Jak liczba pionkow sie skonczy albo dojdziemy do stanu koncowego
+ *
+ * Krawedzie w NFA podzielimy na typy:
+ * - entering (ze startu)
+ * - leaving (do konca)
+ * - internal (nie leaving, nie entering)
+ * - backing (z lastpos do firstpos)
+ * - normal (internal, ale nie backing)
+ * entering == backing jest max. jedna, tylko jezeli NFA akceptuje pusty string
+ */
+
+struct Group {
+};
+
+enum class GroupToken {
+    ENTER, LEAVE,
+};
+
+std::vector<Group> groups;
 
 struct NFA {
-    struct Node {
-        std::set<Node *> edges;
-        int id;
-        char c;
-        bool accepting;
+    typedef std::unordered_map<Group *, std::vector<GroupToken>> GroupsTokens;
+    struct Node;
 
-        explicit Node(int id, bool accepting) : id(id), c{}, accepting{accepting} {}
+    struct Edge {
+        Node *nbh;
+        GroupsTokens groups;
 
-        Node(int id, char c, bool accepting) : id(id), c(c), accepting{accepting} {}
+        friend bool operator==(Edge const &l, Edge const &r) {
+            return l.nbh == r.nbh;
+        }
+
+        friend bool operator<=(Edge const &l, Edge const &r) {
+            return l.nbh <= r.nbh;
+        }
+
+        friend bool operator<(Edge const &l, Edge const &r) {
+            return l.nbh < r.nbh;
+        }
+
+        friend bool operator<(Edge const &l, Node const *r) {
+            return l.nbh < r;
+        }
+
+        friend bool operator<(Node const *l, Edge const &r) {
+            return l < r.nbh;
+        }
     };
 
-    Node start_node{0, false};
-    std::forward_list<Node *> all_nodes;
-    std::forward_list<Node *> end_nodes;
+    struct Node {
+        std::set<Edge, std::less<>> edges;
+        std::variant<std::monostate, Edge> empty_edge;
+        int id;
+        char c;
+
+        explicit Node(int id) : id(id), c{} {}
+
+        Node(int id, char c) : id(id), c(c) {}
+    };
+
+    Node start_node{0};
+    Node end_node{0};
+    std::list<Node *> all_nodes;
+    std::list<Node *> lastpos;
 
     NFA() = default;
 
     NFA(NFA const &other) {
-        start_node.accepting = other.start_node.accepting;
-        std::unordered_map<Node const *, Node *> new_nodes;
-        auto all_nodes_it = all_nodes.cbefore_begin();
-        auto end_nodes_it = end_nodes.cbefore_begin();
-
-        for (auto node : other.all_nodes) {
-            auto new_node = new Node(node->id, node->c, node->accepting);
-            new_nodes[node] = new_node;
-            all_nodes.insert_after(all_nodes_it, new_node);
-            ++all_nodes_it;
-
-            if (node->accepting) {
-                end_nodes.insert_after(end_nodes_it, new_node);
-                ++end_nodes_it;
-            }
-        }
-
-        for (auto nbh : other.start_node.edges) {
-            start_node.edges.insert(new_nodes[nbh]);
-        }
-
-        for (auto node : other.all_nodes) {
-            auto curr_node = new_nodes[node];
-
-            for (auto nbh : node->edges) {
-                curr_node->edges.insert(new_nodes[nbh]);
-            }
-        }
+//        start_node.accepting = other.start_node.accepting;
+//        std::unordered_map<Node const *, Node *> new_nodes;
+//        auto all_nodes_it = all_nodes.cbefore_begin();
+//        auto end_nodes_it = end_nodes.cbefore_begin();
+//
+//        for (auto node : other.all_nodes) {
+//            auto new_node = new Node(node->id, node->c, node->accepting);
+//            new_nodes[node] = new_node;
+//            all_nodes.insert_after(all_nodes_it, new_node);
+//            ++all_nodes_it;
+//
+//            if (node->accepting) {
+//                end_nodes.insert_after(end_nodes_it, new_node);
+//                ++end_nodes_it;
+//            }
+//        }
+//
+//        for (auto nbh : other.start_node.edges) {
+//            start_node.edges.insert(new_nodes[nbh]);
+//        }
+//
+//        for (auto node : other.all_nodes) {
+//            auto curr_node = new_nodes[node];
+//
+//            for (auto nbh : node->edges) {
+//                curr_node->edges.insert(new_nodes[nbh]);
+//            }
+//        }
     }
 
-    NFA(NFA &&other) noexcept: NFA() {
-        swap(*this, other);
-    }
-
-    friend void swap(NFA &left, NFA &right) {
-        using std::swap;
-        std::swap(left.start_node, right.start_node);
-        std::swap(left.all_nodes, right.all_nodes);
-        std::swap(left.end_nodes, right.end_nodes);
-    }
+    NFA(NFA &&other) = default;
 
     NFA &operator=(NFA nfa) {
-        swap(*this, nfa);
+        std::swap(*this, nfa);
         return *this;
     }
 
@@ -88,20 +136,22 @@ struct NFA {
 
     static NFA for_empty() {
         NFA nfa;
-        nfa.start_node.accepting = true;
+        nfa.start_node.empty_edge = Edge{&nfa.end_node};
+        nfa.lastpos.push_front(&nfa.start_node);
         return nfa;
     }
 
     static NFA for_char(int id, char c) {
         NFA nfa;
-        auto node = new Node(id, c, true);
-        nfa.start_node.edges.insert(node);
+        auto node = new Node(id, c);
+        node->empty_edge = Edge{node};
         nfa.all_nodes.push_front(node);
-        nfa.end_nodes.push_front(node);
+        nfa.lastpos.push_front(node);
         return nfa;
     }
 
     static NFA from_ast(::Node *node) {
+        // TODO: zrobic z tego visitora? i zrobic wierzcholki AST jako std::variant?
         switch (node->node_kind()) {
             case CHAR: {
                 auto c = reinterpret_cast<CharNode *>(node);
@@ -133,7 +183,8 @@ struct NFA {
             }
             case RANGE: {
                 auto range = reinterpret_cast<RangeNode *>(node);
-                return std::move(from_ast(range->operand).range(range->min, range->max));
+                return std::move(
+                    from_ast(range->operand).range(range->min, range->max));
             }
             case QMARK: {
                 auto qmark = reinterpret_cast<QMarkNode *>(node);
@@ -156,24 +207,49 @@ struct NFA {
         }
     }
 
-    NFA &star() {
-        // TODO: what about for_nothing().star()? is it for_nothing() or for_empty()?
-        auto &first_pos = start_node.edges;
+    NFA &for_group() {
 
-        for (auto end_node : end_nodes) {
-            end_node->edges.insert(first_pos.begin(), first_pos.end());
+        return *this;
+    }
+
+    NFA &star() {
+        for (auto lastpos_node : lastpos) {
+            auto &empty_edge = std::get<Edge>(lastpos_node->empty_edge);
+            auto edge_it = lastpos_node->edges.begin();
+
+            for (auto &start_edge : start_node.edges) {
+                while (edge_it != lastpos_node->edges.end() && *edge_it <= start_edge) {
+                    ++edge_it;
+                }
+
+                if (edge_it != lastpos_node->edges.end()) {
+                    lastpos_node->edges.insert(
+                        edge_it,{start_edge.nbh, empty_edge.groups}
+                    );
+                }
+            }
         }
 
-        start_node.accepting = true;
+        if (std::holds_alternative<std::monostate>(start_node.empty_edge)) {
+            start_node.empty_edge = Edge{&end_node};
+        }
+
         return *this;
     }
 
     NFA &qmark() {
-        start_node.accepting = true;
+        if (std::holds_alternative<std::monostate>(start_node.empty_edge)) {
+            start_node.empty_edge = Edge{&end_node};
+        }
+
         return *this;
     }
 
-    NFA &concatenate(NFA &&other) {
+    NFA &concatenate(NFA other) {
+        for (auto lastpos_node : lastpos) {
+            for ()
+        }
+
         auto &other_first_pos = other.start_node.edges;
 
         for (auto end_node : end_nodes) {
@@ -303,7 +379,8 @@ struct IterMatch {
     int end;
     int pos = 0;
 
-    IterMatch(std::string text, int start, int end) : text(std::move(text)), start(start), end(end) {}
+    IterMatch(std::string text, int start, int end) : text(std::move(text)),
+                                                      start(start), end(end) {}
 
     Match next() {
 

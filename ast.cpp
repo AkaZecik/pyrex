@@ -9,6 +9,7 @@
 #include <vector>
 
 enum NodeKind {
+    EMPTY,
     CHAR,
     GROUP,
     STAR,
@@ -79,6 +80,16 @@ struct CharNode : LeafNode {
                     return result;
                 }
         }
+    }
+};
+
+struct Empty : LeafNode {
+    NodeKind node_kind() override {
+        return NodeKind::EMPTY;
+    }
+
+    std::string to_string() override {
+        return "\\e";
     }
 };
 

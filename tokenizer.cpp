@@ -21,6 +21,7 @@ enum class TokenType {
     QMARK,
     CHAR,
     DIGIT,
+    EMPTY,
     END,
 };
 
@@ -97,6 +98,8 @@ struct Tokenizer {
         curr_pos += 1;
 
         switch (c) {
+            case 'e':
+                return Token(TokenType::EMPTY);
             case 'n':
                 return {TokenType::CHAR, '\n'};
             case 'r':
