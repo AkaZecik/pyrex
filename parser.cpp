@@ -82,6 +82,8 @@ struct Parser {
                 char_id += 1;
             } else if (token.type == TokenType::EMPTY) {
                 results.push_back(new EmptyNode());
+            } else if (token.type == TokenType::NOTHING) {
+                results.push_back(new NothingNode());
             } else if (token.type == TokenType::END) {
                 drop_operators_until_group();
 

@@ -23,6 +23,7 @@ enum class TokenType {
     DIGIT,
     DOT,
     EMPTY,
+    NOTHING,
     END,
 };
 
@@ -101,6 +102,8 @@ struct Tokenizer {
         curr_pos += 1;
 
         switch (c) {
+            case '#':
+                return Token(TokenType::NOTHING);
             case 'e':
                 return Token(TokenType::EMPTY);
             case 'n':

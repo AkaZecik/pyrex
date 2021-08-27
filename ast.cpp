@@ -8,6 +8,7 @@
 #include <vector>
 
 enum NodeKind {
+    NOTHING,
     EMPTY,
     CHAR,
     DOT,
@@ -44,12 +45,6 @@ struct CharNode : LeafNode {
     }
 };
 
-struct EmptyNode : LeafNode {
-    NodeKind node_kind() override {
-        return NodeKind::EMPTY;
-    }
-};
-
 struct DotNode : LeafNode {
     int id;
 
@@ -57,6 +52,18 @@ struct DotNode : LeafNode {
 
     NodeKind node_kind() override {
         return NodeKind::DOT;
+    }
+};
+
+struct EmptyNode : LeafNode {
+    NodeKind node_kind() override {
+        return NodeKind::EMPTY;
+    }
+};
+
+struct NothingNode : LeafNode {
+    NodeKind node_kind() override {
+        return NodeKind::NOTHING;
     }
 };
 

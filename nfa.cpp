@@ -171,6 +171,9 @@ struct Regex {
 
         static NFA from_ast(::Node *node) {
             switch (node->node_kind()) {
+                case NOTHING: {
+                    return for_nothing();
+                }
                 case EMPTY: {
                     return for_empty();
                 }
