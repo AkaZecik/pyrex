@@ -5,12 +5,12 @@
 #ifndef AST_CPP
 #define AST_CPP
 
-#include <string>
 #include <vector>
 
 enum NodeKind {
     EMPTY,
     CHAR,
+    DOT,
     GROUP,
     STAR,
     PLUS,
@@ -28,8 +28,6 @@ struct Node {
     virtual ~Node() = default;
 
     virtual NodeKind node_kind() = 0;
-
-    virtual std::string to_string() = 0;
 };
 
 struct LeafNode : Node {
@@ -44,52 +42,21 @@ struct CharNode : LeafNode {
     NodeKind node_kind() override {
         return NodeKind::CHAR;
     }
-
-    std::string to_string() override {
-        switch (value) {
-            case '\n':
-                return "\\n";
-            case '\r':
-                return "\\r";
-            case '\f':
-                return "\\f";
-            case '\t':
-                return "\\t";
-            case '\\':
-                return "\\\\";
-            case '(':
-                return "\\(";
-            case ')':
-                return "\\)";
-            case '*':
-                return "\\*";
-            case '|':
-                return "\\|";
-            case '?':
-                return "\\?";
-            default:
-                if (' ' <= value && value <= '~') {
-                    return {1, value};
-                } else {
-                    // TODO: assumes size of char is 1 byte
-                    static char const *const hex = "0123456789abcdef";
-                    auto n = static_cast<unsigned char>(value);
-                    std::string result = "\\x00";
-                    result[2] = hex[n / 16];
-                    result[3] = hex[n % 16];
-                    return result;
-                }
-        }
-    }
 };
 
-struct Empty : LeafNode {
+struct EmptyNode : LeafNode {
     NodeKind node_kind() override {
         return NodeKind::EMPTY;
     }
+};
 
-    std::string to_string() override {
-        return "\\e";
+struct DotNode : LeafNode {
+    int id;
+
+    explicit DotNode(int id) : id(id) {}
+
+    NodeKind node_kind() override {
+        return NodeKind::DOT;
     }
 };
 
@@ -123,10 +90,6 @@ struct GroupNode : InternalNode {
 
     int arity() override {
         return 1;
-    }
-
-    std::string to_string() override {
-        return std::string("(").append(operand->to_string()).append(")");
     }
 };
 
@@ -172,10 +135,6 @@ struct StarNode : UnaryOperator {
     int precedence() override {
         return 1;
     }
-
-    std::string to_string() override {
-        return operand->to_string().append("*");
-    }
 };
 
 struct PlusNode : UnaryOperator {
@@ -185,10 +144,6 @@ struct PlusNode : UnaryOperator {
 
     int precedence() override {
         return 1;
-    }
-
-    std::string to_string() override {
-        return operand->to_string().append("+");
     }
 };
 
@@ -204,11 +159,6 @@ struct PowerNode : UnaryOperator {
     int precedence() override {
         return 1;
     }
-
-    std::string to_string() override {
-        return operand->to_string().append("{").append(std::to_string(power)).append(
-            "}");
-    }
 };
 
 struct MinNode : UnaryOperator {
@@ -223,11 +173,6 @@ struct MinNode : UnaryOperator {
     int precedence() override {
         return 1;
     }
-
-    std::string to_string() override {
-        return operand->to_string().append("{").append(std::to_string(min)).append(
-            ",}");
-    }
 };
 
 struct MaxNode : UnaryOperator {
@@ -241,11 +186,6 @@ struct MaxNode : UnaryOperator {
 
     int precedence() override {
         return 1;
-    }
-
-    std::string to_string() override {
-        return operand->to_string().append("{,").append(std::to_string(max)).append(
-            "}");
     }
 };
 
@@ -262,11 +202,6 @@ struct RangeNode : UnaryOperator {
     int precedence() override {
         return 1;
     }
-
-    std::string to_string() override {
-        return operand->to_string().append("{").append(std::to_string(min)).append(
-            ",").append(std::to_string(max)).append("}");
-    }
 };
 
 struct QMarkNode : UnaryOperator {
@@ -276,10 +211,6 @@ struct QMarkNode : UnaryOperator {
 
     int precedence() override {
         return 1;
-    }
-
-    std::string to_string() override {
-        return operand->to_string().append("?");
     }
 };
 
@@ -291,10 +222,6 @@ struct ConcatNode : BinaryOperator {
     int precedence() override {
         return 2;
     }
-
-    std::string to_string() override {
-        return left_operand->to_string().append(right_operand->to_string());
-    }
 };
 
 struct UnionNode : BinaryOperator {
@@ -304,10 +231,6 @@ struct UnionNode : BinaryOperator {
 
     int precedence() override {
         return 3;
-    }
-
-    std::string to_string() override {
-        return left_operand->to_string().append("|").append(right_operand->to_string());
     }
 };
 

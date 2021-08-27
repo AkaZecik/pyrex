@@ -1,3 +1,42 @@
+* operator %
+* operator &
+* operator -, xor
+* znak \e, \#
+* znak .
+* charset [a-ce-x]
+* przyjmowanie tekstu poprzez iterator do kolejnych znakow, zeby moc obslugiwac \0
+* reprezentacja przedzialu znakow za pomoca jednego wierzcholka i wielu krawedzi
+* reprezentacja przedzialu znakow za pomoca jednego wierzcholka i jednej krawedzi
+* byc moze w obecnej implementacji nie jest potrzebne trzymanie znaku na wierzcholku
+  i wystarcza znaki na krawedziach 
+* 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 * Parse regex with operators *, |, ?, concat, \xNN, literals and numbered groups ()
 * Add handling of +
 * Add handling of {n}

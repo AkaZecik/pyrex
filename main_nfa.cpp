@@ -16,7 +16,7 @@ int main() {
         std::getline(std::cin, input);
         Parser parser(input);
         Node *tree = parser.parse();
-        NFA nfa = std::move(NFA::from_ast(tree));
+        Regex::NFA nfa = std::move(Regex::NFA::from_ast(tree));
         std::cout << "matching:" << std::endl;
         while (true) {
             std::string text;
@@ -25,7 +25,7 @@ int main() {
             if (text == "next") {
                 break;
             }
-            std::cout << text.size() << std::endl;
+//            std::cout << text.size() << std::endl;
             std::cout << std::boolalpha << nfa.traverse(text, 0, 0, nullptr) << std::endl;
         }
         std::cout << "---" << std::endl;

@@ -70,7 +70,7 @@ struct Regex {
         NFA() = default;
 
         NFA(NFA const &other) {
-            std::cout << "NFA(NFA const &)" << std::endl;
+//            std::cout << "NFA(NFA const &)" << std::endl;
             std::unordered_map<Node const *, Node *> new_nodes;
 
             for (auto orig_node : other.all_nodes) {
@@ -171,9 +171,16 @@ struct Regex {
 
         static NFA from_ast(::Node *node) {
             switch (node->node_kind()) {
+                case EMPTY: {
+                    return for_empty();
+                }
                 case CHAR: {
                     auto c = reinterpret_cast<CharNode *>(node);
                     return for_char(c->id, c->value);
+                }
+                case DOT: {
+                    auto dot = reinterpret_cast<DotNode *>(node);
+                    return for_dot(dot->id);
                 }
                 case GROUP: {
                     auto group = reinterpret_cast<GroupNode *>(node);
@@ -245,12 +252,26 @@ struct Regex {
             return nfa;
         }
 
+        static NFA for_dot(int id) {
+            NFA nfa;
+            auto node = new Node(id);
+            node->empty_edge.emplace<GroupToTokens>();
+            nfa.all_nodes.push_back(node);
+            nfa.lastpos.push_back(node);
+
+            for (unsigned int i = 0; i < 128; ++i) {
+                char c = static_cast<char>(i);
+                nfa.start_node.edges[c].insert({node, {}});
+            }
+
+            return nfa;
+        }
+
         NFA &for_non_capturing_group() {
             return *this;
         }
 
         NFA &for_numbered_group() {
-            numbered_groups;
             Group *numbered_group = nullptr;
             for_group(numbered_group);
             return *this;

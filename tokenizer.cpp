@@ -21,6 +21,7 @@ enum class TokenType {
     QMARK,
     CHAR,
     DIGIT,
+    DOT,
     EMPTY,
     END,
 };
@@ -78,6 +79,8 @@ struct Tokenizer {
                 return Token(TokenType::UNION);
             case '?':
                 return Token(TokenType::QMARK);
+            case '.':
+                return Token(TokenType::DOT);
             case '\\':
                 return parse_escape();
             default:
@@ -126,6 +129,8 @@ struct Tokenizer {
                 return {TokenType::CHAR, '{'};
             case '}':
                 return {TokenType::CHAR, '}'};
+            case '.':
+                return {TokenType::CHAR, '.'};
             case 'x':
                 return {TokenType::CHAR, parse_hex()};
             default:

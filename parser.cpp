@@ -77,6 +77,11 @@ struct Parser {
                        token.type == TokenType::DIGIT) {
                 results.push_back(new CharNode(char_id, token.value));
                 char_id += 1;
+            } else if (token.type == TokenType::DOT) {
+                results.push_back(new DotNode(char_id));
+                char_id += 1;
+            } else if (token.type == TokenType::EMPTY) {
+                results.push_back(new EmptyNode());
             } else if (token.type == TokenType::END) {
                 drop_operators_until_group();
 
@@ -107,7 +112,9 @@ struct Parser {
             token.type == TokenType::PLUS ||
             token.type == TokenType::QMARK ||
             token.type == TokenType::CHAR ||
-            token.type == TokenType::DIGIT
+            token.type == TokenType::DIGIT ||
+            token.type == TokenType::DOT ||
+            token.type == TokenType::EMPTY
         );
     }
 
@@ -115,11 +122,14 @@ struct Parser {
         return (
             token.type == TokenType::LPAREN ||
             token.type == TokenType::CHAR ||
-            token.type == TokenType::DIGIT
+            token.type == TokenType::DIGIT ||
+            token.type == TokenType::DOT ||
+            token.type == TokenType::EMPTY
         );
     }
 
     void parse_range() {
+        // TODO: check if values are not starting with 0s
         std::string num1, num2;
 
         while (tokens[curr_pos].type == TokenType::DIGIT) {
