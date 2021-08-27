@@ -69,7 +69,7 @@ struct NFA {
             }
         }
 
-        for (auto [orig_node, new_node] : new_nodes) {
+        for (auto[orig_node, new_node] : new_nodes) {
             new_node->empty_edge = orig_node->empty_edge;
 
             for (auto &[c, orig_node_edges_for_c] : orig_node->edges) {
@@ -105,17 +105,33 @@ struct NFA {
         }
     }
 
-    void traverse(std::string const &text, Group *group) {
+    bool traverse(std::string const &text, std::size_t start, std::size_t end,
+                  Group *group) {
         std::vector<Node *> old_state, new_state;
         std::unordered_map<Node *, bool> visited;
 
-        if (std::holds_alternative<GroupToTokens>(start_node.empty_edge)) {
-            // nfa accepts empty string
+        for (auto node : all_nodes) {
+            visited[node] = false;
         }
 
-        old_state.push_back(&start_node);
+        new_state.push_back(&start_node);
+        std::size_t pos = 0;
 
-        for (char c : text) {
+        while (!new_state.empty()) {
+            if (pos == text.size()) {
+                for (auto node : new_state) {
+                    if (std::holds_alternative<GroupToTokens>(node->empty_edge)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            std::swap(new_state, old_state);
+            char c = text[pos];
+            pos += 1;
+
             while (!old_state.empty()) {
                 auto top = old_state.back();
                 old_state.pop_back();
@@ -132,17 +148,11 @@ struct NFA {
             }
 
             for (auto node : new_state) {
-                if (std::holds_alternative<GroupToTokens>(node->empty_edge)) {
-                    // mozna tutaj skonczyc szukanie
-                }
-            }
-
-            for (auto node : new_state) {
                 visited[node] = false;
             }
-
-            std::swap(old_state, new_state);
         }
+
+        return false;
     }
 
     static NFA from_ast(::Node *node) {
