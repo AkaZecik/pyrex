@@ -40,6 +40,9 @@ struct NFA {
     struct Node {
         typedef std::unordered_map<char, std::map<Node *, GroupToTokens>> Edges;
 
+        // store independently:
+        // - std::map<char, std::set<Node *>>
+        // - std::unordered_map<Node *, GroupToTokens>
         Edges edges;
         std::variant<std::monostate, GroupToTokens> empty_edge;
         int id;
@@ -57,11 +60,12 @@ struct NFA {
     NFA() = default;
 
     NFA(NFA const &other) {
-        std::cout << "NFA(NFA const &)" << std::endl;
+//        std::cout << "NFA(NFA const &)" << std::endl;
         std::unordered_map<Node const *, Node *> new_nodes;
 
         for (auto orig_node : other.all_nodes) {
             auto new_node = new Node(orig_node->id, orig_node->c);
+            new_nodes[orig_node] = new_node;
             all_nodes.push_back(new_node);
 
             if (std::holds_alternative<GroupToTokens>(orig_node->empty_edge)) {

@@ -67,6 +67,8 @@ struct Parser {
                 throw std::runtime_error("Unpaired closing curly brace");
             } else if (token.type == TokenType::STAR) {
                 interpret_operator(new StarNode());
+            } else if (token.type == TokenType::PLUS) {
+                interpret_operator(new PlusNode());
             } else if (token.type == TokenType::QMARK) {
                 interpret_operator(new QMarkNode());
             } else if (token.type == TokenType::UNION) {
