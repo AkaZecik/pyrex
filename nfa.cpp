@@ -10,6 +10,7 @@
 #include <map>
 #include <unordered_map>
 #include <variant>
+#include <iostream>
 #include "ast.cpp"
 
 /*
@@ -21,14 +22,6 @@
  * to przestajemy zapamietywac nowe substringi, ale dalej pamietamy pionki, ktore
  * chodzily po NFA, z tym, ze juz nie tworzymy nowych pionkow, a te ktore znikly
  * po prostu znikly. Jak liczba pionkow sie skonczy albo dojdziemy do stanu koncowego
- *
- * Krawedzie w NFA podzielimy na typy:
- * - entering (ze startu)
- * - leaving (do konca)
- * - internal (nie leaving, nie entering)
- * - backing (z lastpos do firstpos)
- * - normal (internal, ale nie backing)
- * entering == backing jest max. jedna, tylko jezeli NFA akceptuje pusty string
  */
 
 struct Group {
@@ -63,6 +56,7 @@ struct NFA {
     NFA() = default;
 
     NFA(NFA const &other) {
+        std::cout << "NFA(NFA const &)" << std::endl;
         std::unordered_map<Node const *, Node *> new_nodes;
 
         for (auto orig_node : other.all_nodes) {
@@ -100,6 +94,14 @@ struct NFA {
         for (auto node : all_nodes) {
             delete node;
         }
+    }
+
+    void traverse() {
+        std::vector<Node *> old_state, new_state;
+        std::unordered_map<Node *, bool> visited;
+        // pawns: lista pionkow, na pionkach lub obok, musimy kolekcjonowac
+        //  podslowa, ktore zostaly juz do konca zmatchowane oraz te, ktore jeszcze nie
+        //  sa do konca zmatchowane.
     }
 
     static NFA from_ast(::Node *node) {
