@@ -35,11 +35,12 @@ enum class GroupToken {
 std::list<Group> groups;
 
 struct NFA {
-    // TODO: maybe make the value an encapsulated 2-element array?
     typedef std::unordered_map<Group *, std::vector<GroupToken>> GroupToTokens;
 
     struct Node {
-        std::map<Node *, GroupToTokens> edges;
+        typedef std::unordered_map<char, std::map<Node *, GroupToTokens>> Edges;
+
+        Edges edges;
         std::variant<std::monostate, GroupToTokens> empty_edge;
         int id;
         char c;
@@ -51,7 +52,7 @@ struct NFA {
 
     Node start_node{0};
     std::list<Node *> all_nodes;
-    std::list<Node *> lastpos;  // Maybe it should hold only internal nodes, not start?
+    std::list<Node *> lastpos;
 
     NFA() = default;
 
@@ -71,15 +72,23 @@ struct NFA {
         for (auto [orig_node, new_node] : new_nodes) {
             new_node->empty_edge = orig_node->empty_edge;
 
-            for (auto &[nbh, tokens] : orig_node->edges) {
-                new_node->edges[new_nodes[nbh]] = tokens;
+            for (auto &[c, orig_node_edges_for_c] : orig_node->edges) {
+                auto &new_node_edges_for_c = new_node->edges[c];
+
+                for (auto &[nbh, tokens]: orig_node_edges_for_c) {
+                    new_node_edges_for_c[new_nodes[nbh]] = tokens;
+                }
             }
         }
 
         start_node.empty_edge = other.start_node.empty_edge;
 
-        for (auto &[nbh, tokens] : other.start_node.edges) {
-            start_node.edges[new_nodes[nbh]] = tokens;
+        for (auto &[c, orig_start_node_edges_for_c] : other.start_node.edges) {
+            auto &start_node_edges_for_c = start_node.edges[c];
+
+            for (auto &[nbh, tokens] : orig_start_node_edges_for_c) {
+                start_node_edges_for_c[new_nodes[nbh]] = tokens;
+            }
         }
     }
 
@@ -168,16 +177,16 @@ struct NFA {
     static NFA for_empty() {
         NFA nfa;
         nfa.start_node.empty_edge.emplace<GroupToTokens>();
-//        nfa.lastpos.push_back(&nfa.start_node);
         return nfa;
     }
 
     static NFA for_char(int id, char c) {
         NFA nfa;
         auto node = new Node(id, c);
-        node->empty_edge.emplace<GroupToTokens>();
         nfa.all_nodes.push_back(node);
         nfa.lastpos.push_back(node);
+        node->empty_edge.emplace<GroupToTokens>();
+        node->edges[c].insert({node, {}});
         return nfa;
     }
 
@@ -186,13 +195,13 @@ struct NFA {
     }
 
     NFA &for_numbered_group() {
-        Group *named_group = nullptr; // TODO
-        for_group(named_group);
+        Group *numbered_group = nullptr;
+        for_group(numbered_group);
         return *this;
     }
 
     NFA &for_named_group() {
-        Group *named_group = nullptr; // TODO
+        Group *named_group = nullptr;
         for_group(named_group);
         return *this;
     }
@@ -204,8 +213,10 @@ struct NFA {
             tokens.push_back(GroupToken::LEAVE);
         }
 
-        for (auto &[_, tokens] : start_node.edges) {
-            tokens[group].push_back(GroupToken::ENTER);
+        for (auto &[c, edges_for_c] : start_node.edges) {
+            for (auto &[nbh, tokens] : edges_for_c) {
+                tokens[group].push_back(GroupToken::ENTER);
+            }
         }
 
         for (auto lastpos_node : lastpos) {
@@ -231,10 +242,12 @@ struct NFA {
         auto connect_to_other = [&other](NFA::Node *node) {
             auto const &empty_edge = std::get<GroupToTokens>(node->empty_edge);
 
-            for (auto const &[nbh, tokens] : other.start_node.edges) {
-                GroupToTokens new_tokens(empty_edge);
-                new_tokens.insert(tokens.cbegin(), tokens.cend());
-                node->edges.emplace(nbh, std::move(new_tokens));
+            for (auto const &[c, edges_for_c] : other.start_node.edges) {
+                for (auto &[nbh, tokens] : edges_for_c) {
+                    GroupToTokens new_tokens(empty_edge);
+                    new_tokens.insert(tokens.cbegin(), tokens.cend());
+                    node->edges[c].emplace(nbh, std::move(new_tokens));
+                }
             }
         };
 
@@ -296,21 +309,27 @@ struct NFA {
 
     NFA &star() {
         for (auto lastpos_node : lastpos) {
-            auto const &empty_edge = std::get<GroupToTokens>(lastpos_node->empty_edge);
-            auto edge_it = lastpos_node->edges.begin();
+            auto &lastpos_node_empty_edge = std::get<GroupToTokens>(
+                lastpos_node->empty_edge);
 
-            for (auto &[firstpos_node, firstpos_tokens] : start_node.edges) {
-                while (edge_it != lastpos_node->edges.end() &&
-                       edge_it->first <= firstpos_node) {
-                    ++edge_it;
-                }
+            for (auto &[c, start_edges_for_c] : start_node.edges) {
+                for (auto &[firstpos_node, firstpos_tokens] : start_edges_for_c) {
+                    auto &lastpos_node_edges_for_c = lastpos_node->edges[c];
+                    auto edge_it = lastpos_node_edges_for_c.begin();
 
-                if (edge_it != lastpos_node->edges.end()) {
-                    GroupToTokens new_tokens(empty_edge);
-                    new_tokens.insert(firstpos_tokens.cbegin(), firstpos_tokens.cend());
-                    lastpos_node->edges.emplace_hint(
-                        edge_it, firstpos_node, std::move(new_tokens)
-                    );
+                    while (edge_it != lastpos_node_edges_for_c.end() &&
+                           edge_it->first <= firstpos_node) {
+                        ++edge_it;
+                    }
+
+                    if (edge_it != lastpos_node_edges_for_c.end()) {
+                        GroupToTokens new_tokens(lastpos_node_empty_edge);
+                        new_tokens.insert(firstpos_tokens.cbegin(),
+                                          firstpos_tokens.cend());
+                        lastpos_node_edges_for_c.emplace_hint(
+                            edge_it, firstpos_node, std::move(new_tokens)
+                        );
+                    }
                 }
             }
         }
