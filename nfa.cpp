@@ -105,12 +105,44 @@ struct NFA {
         }
     }
 
-    void traverse() {
+    void traverse(std::string const &text, Group *group) {
         std::vector<Node *> old_state, new_state;
         std::unordered_map<Node *, bool> visited;
-        // pawns: lista pionkow, na pionkach lub obok, musimy kolekcjonowac
-        //  podslowa, ktore zostaly juz do konca zmatchowane oraz te, ktore jeszcze nie
-        //  sa do konca zmatchowane.
+
+        if (std::holds_alternative<GroupToTokens>(start_node.empty_edge)) {
+            // nfa accepts empty string
+        }
+
+        old_state.push_back(&start_node);
+
+        for (char c : text) {
+            while (!old_state.empty()) {
+                auto top = old_state.back();
+                old_state.pop_back();
+                auto edges_for_c_it = top->edges.find(c);
+
+                if (edges_for_c_it != top->edges.end()) {
+                    for (auto &[nbh, tokens] : edges_for_c_it->second) {
+                        if (!visited[nbh]) {
+                            visited[nbh] = true;
+                            new_state.push_back(nbh);
+                        }
+                    }
+                }
+            }
+
+            for (auto node : new_state) {
+                if (std::holds_alternative<GroupToTokens>(node->empty_edge)) {
+                    // mozna tutaj skonczyc szukanie
+                }
+            }
+
+            for (auto node : new_state) {
+                visited[node] = false;
+            }
+
+            std::swap(old_state, new_state);
+        }
     }
 
     static NFA from_ast(::Node *node) {
