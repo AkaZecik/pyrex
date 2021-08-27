@@ -156,7 +156,6 @@ struct NFA {
     }
 
     static NFA from_ast(::Node *node) {
-        // TODO: zrobic z tego visitora? i zrobic wierzcholki AST jako std::variant?
         switch (node->node_kind()) {
             case CHAR: {
                 auto c = reinterpret_cast<CharNode *>(node);
@@ -164,7 +163,7 @@ struct NFA {
             }
             case GROUP: {
                 auto group = reinterpret_cast<GroupNode *>(node);
-                return std::move(from_ast(group->operand).for_named_group());
+                return std::move(from_ast(group->operand).for_numbered_group());
             }
             case STAR: {
                 auto star = reinterpret_cast<StarNode *>(node);
@@ -225,10 +224,10 @@ struct NFA {
     static NFA for_char(int id, char c) {
         NFA nfa;
         auto node = new Node(id, c);
+        node->empty_edge.emplace<GroupToTokens>();
         nfa.all_nodes.push_back(node);
         nfa.lastpos.push_back(node);
-        node->empty_edge.emplace<GroupToTokens>();
-        node->edges[c].insert({node, {}});
+        nfa.start_node.edges[c].insert({node, {}});
         return nfa;
     }
 
@@ -333,7 +332,10 @@ struct NFA {
     NFA &union_(NFA other) {
         auto empty_left = std::get_if<GroupToTokens>(&start_node.empty_edge);
         auto empty_right = std::get_if<GroupToTokens>(&other.start_node.empty_edge);
-        start_node.edges.merge(other.start_node.edges);
+
+        for (auto &[c, other_start_edges_for_c] : other.start_node.edges) {
+            start_node.edges[c].merge(other_start_edges_for_c);
+        }
 
         if (empty_right) {
             if (empty_left) {
@@ -343,6 +345,7 @@ struct NFA {
             }
         }
 
+        all_nodes.splice(all_nodes.cend(), other.all_nodes);
         lastpos.splice(lastpos.cend(), other.lastpos);
         other.start_node.edges.clear();
         other.start_node.empty_edge.emplace<std::monostate>();
@@ -355,16 +358,18 @@ struct NFA {
                 lastpos_node->empty_edge);
 
             for (auto &[c, start_edges_for_c] : start_node.edges) {
-                for (auto &[firstpos_node, firstpos_tokens] : start_edges_for_c) {
-                    auto &lastpos_node_edges_for_c = lastpos_node->edges[c];
-                    auto edge_it = lastpos_node_edges_for_c.begin();
+                auto &lastpos_node_edges_for_c = lastpos_node->edges[c];
+                auto edge_it = lastpos_node_edges_for_c.begin();
 
+                for (auto &[firstpos_node, firstpos_tokens] : start_edges_for_c) {
                     while (edge_it != lastpos_node_edges_for_c.end() &&
-                           edge_it->first <= firstpos_node) {
+                           edge_it->first < firstpos_node) {
                         ++edge_it;
                     }
 
-                    if (edge_it != lastpos_node_edges_for_c.end()) {
+                    if (edge_it != lastpos_node_edges_for_c.end() && edge_it->first == firstpos_node) {
+                        ++edge_it;
+                    } else {
                         GroupToTokens new_tokens(lastpos_node_empty_edge);
                         new_tokens.insert(firstpos_tokens.cbegin(),
                                           firstpos_tokens.cend());
