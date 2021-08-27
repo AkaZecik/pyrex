@@ -12,6 +12,12 @@ enum NodeKind {
     EMPTY,
     CHAR,
     DOT,
+    SMALL_D,
+    BIG_D,
+    SMALL_S,
+    BIG_S,
+    SMALL_W,
+    BIG_W,
     GROUP,
     STAR,
     PLUS,
@@ -32,13 +38,15 @@ struct Node {
 };
 
 struct LeafNode : Node {
+    int id;
+
+    explicit LeafNode(int id) : id(id) {}
 };
 
 struct CharNode : LeafNode {
-    int id;
     char value;
 
-    explicit CharNode(int id, char value) : id(id), value(value) {}
+    explicit CharNode(int id, char value) : LeafNode{id}, value(value) {}
 
     NodeKind node_kind() override {
         return NodeKind::CHAR;
@@ -46,22 +54,72 @@ struct CharNode : LeafNode {
 };
 
 struct DotNode : LeafNode {
-    int id;
-
-    explicit DotNode(int id) : id(id) {}
+    explicit DotNode(int id) : LeafNode{id} {}
 
     NodeKind node_kind() override {
         return NodeKind::DOT;
     }
 };
 
+struct SmallDNode : LeafNode {
+    explicit SmallDNode(int id) : LeafNode{id} {}
+
+    NodeKind node_kind() override {
+        return NodeKind::SMALL_D;
+    }
+};
+
+struct BigDNode : LeafNode {
+    explicit BigDNode(int id) : LeafNode{id} {}
+
+    NodeKind node_kind() override {
+        return NodeKind::BIG_D;
+    }
+};
+
+struct SmallSNode : LeafNode {
+    explicit SmallSNode(int id) : LeafNode{id} {}
+
+    NodeKind node_kind() override {
+        return NodeKind::SMALL_S;
+    }
+};
+
+struct BigSNode : LeafNode {
+    explicit BigSNode(int id) : LeafNode{id} {}
+
+    NodeKind node_kind() override {
+        return NodeKind::BIG_S;
+    }
+};
+
+struct SmallWNode : LeafNode {
+    explicit SmallWNode(int id) : LeafNode{id} {}
+
+    NodeKind node_kind() override {
+        return NodeKind::SMALL_W;
+    }
+};
+
+struct BigWNode : LeafNode {
+    explicit BigWNode(int id) : LeafNode{id} {}
+
+    NodeKind node_kind() override {
+        return NodeKind::BIG_W;
+    }
+};
+
 struct EmptyNode : LeafNode {
+    explicit EmptyNode(int id) : LeafNode{id} {}
+
     NodeKind node_kind() override {
         return NodeKind::EMPTY;
     }
 };
 
 struct NothingNode : LeafNode {
+    explicit NothingNode(int id) : LeafNode{id} {}
+
     NodeKind node_kind() override {
         return NodeKind::NOTHING;
     }

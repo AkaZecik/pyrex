@@ -16,7 +16,7 @@ struct Parser {
     std::vector<InternalNode *> stack;
     long long curr_pos = 0;
     int group_id = 1;
-    int char_id = 1;
+    int leaf_id = 1;
 
     explicit Parser(std::string regex) {
         Tokenizer tokenizer(std::move(regex));
@@ -75,15 +75,34 @@ struct Parser {
                 interpret_operator(new UnionNode());
             } else if (token.type == TokenType::CHAR ||
                        token.type == TokenType::DIGIT) {
-                results.push_back(new CharNode(char_id, token.value));
-                char_id += 1;
+                results.push_back(new CharNode(leaf_id, token.value));
+                leaf_id += 1;
             } else if (token.type == TokenType::DOT) {
-                results.push_back(new DotNode(char_id));
-                char_id += 1;
+                results.push_back(new DotNode(leaf_id));
+                leaf_id += 1;
+            } else if (token.type == TokenType::SMALL_D) {
+                results.push_back(new SmallDNode(leaf_id));
+                leaf_id += 1;
+            } else if (token.type == TokenType::BIG_D) {
+                results.push_back(new BigDNode(leaf_id));
+                leaf_id += 1;
+            } else if (token.type == TokenType::SMALL_S) {
+                results.push_back(new SmallSNode(leaf_id));
+                leaf_id += 1;
+            } else if (token.type == TokenType::BIG_S) {
+                results.push_back(new BigSNode(leaf_id));
+                leaf_id += 1;
+            } else if (token.type == TokenType::SMALL_W) {
+                results.push_back(new SmallWNode(leaf_id));
+                leaf_id += 1;
+            } else if (token.type == TokenType::BIG_W) {
+                results.push_back(new BigWNode(leaf_id));
+                leaf_id += 1;
             } else if (token.type == TokenType::EMPTY) {
-                results.push_back(new EmptyNode());
+                results.push_back(new EmptyNode(leaf_id));
             } else if (token.type == TokenType::NOTHING) {
-                results.push_back(new NothingNode());
+                results.push_back(new NothingNode(leaf_id));
+                leaf_id += 1;
             } else if (token.type == TokenType::END) {
                 drop_operators_until_group();
 
@@ -95,7 +114,9 @@ struct Parser {
                     throw std::runtime_error("Not enough operators");  // TODO: improve
                 }
 
-                return results.back();
+                auto result = results.back();
+                results.pop_back();
+                return result;
             } else {
                 throw std::runtime_error("Unknown token type");
             }
@@ -116,7 +137,13 @@ struct Parser {
             token.type == TokenType::CHAR ||
             token.type == TokenType::DIGIT ||
             token.type == TokenType::DOT ||
-            token.type == TokenType::EMPTY
+            token.type == TokenType::EMPTY ||
+            token.type == TokenType::SMALL_D ||
+            token.type == TokenType::BIG_D ||
+            token.type == TokenType::SMALL_S ||
+            token.type == TokenType::BIG_S ||
+            token.type == TokenType::SMALL_W ||
+            token.type == TokenType::BIG_W
         );
     }
 
@@ -126,7 +153,13 @@ struct Parser {
             token.type == TokenType::CHAR ||
             token.type == TokenType::DIGIT ||
             token.type == TokenType::DOT ||
-            token.type == TokenType::EMPTY
+            token.type == TokenType::EMPTY ||
+            token.type == TokenType::SMALL_D ||
+            token.type == TokenType::BIG_D ||
+            token.type == TokenType::SMALL_S ||
+            token.type == TokenType::BIG_S ||
+            token.type == TokenType::SMALL_W ||
+            token.type == TokenType::BIG_W
         );
     }
 

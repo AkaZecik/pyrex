@@ -9,7 +9,7 @@
 * reprezentacja przedzialu znakow za pomoca jednego wierzcholka i jednej krawedzi
 * byc moze w obecnej implementacji nie jest potrzebne trzymanie znaku na wierzcholku
   i wystarcza znaki na krawedziach 
-* 
+* usunac 'id' z lisci w AST
 
 
 

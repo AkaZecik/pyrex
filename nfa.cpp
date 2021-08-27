@@ -36,7 +36,7 @@ struct Regex {
 
     enum class GroupToken {
         ENTER, LEAVE,
-        };
+    };
 
     std::list<Group> numbered_groups;
 
@@ -55,8 +55,8 @@ struct Regex {
             //  range is compared to
             Edges edges;
             std::variant<std::monostate, GroupToTokens> empty_edge;
-            int id;
-            char c;
+            int id; // can be removed
+            char c; // TODO: can be removed
 
             explicit Node(int id) : id(id), c{} {}
 
@@ -185,6 +185,27 @@ struct Regex {
                     auto dot = reinterpret_cast<DotNode *>(node);
                     return for_dot(dot->id);
                 }
+                case SMALL_D: {
+                    auto small_d = reinterpret_cast<SmallDNode *>(node);
+                    return for_small_d(small_d->id);
+                }
+                case BIG_D: {
+                    // TODO
+                }
+                case SMALL_S: {
+                    auto small_s = reinterpret_cast<SmallSNode *>(node);
+                    return for_small_s(small_s->id);
+                }
+                case BIG_S: {
+                    // TODO
+                }
+                case SMALL_W: {
+                    auto small_w = reinterpret_cast<SmallWNode *>(node);
+                    return for_small_w(small_w->id);
+                }
+                case BIG_W: {
+                    // TODO
+                }
                 case GROUP: {
                     auto group = reinterpret_cast<GroupNode *>(node);
                     return std::move(from_ast(group->operand).for_numbered_group());
@@ -222,13 +243,13 @@ struct Regex {
                     auto concat = reinterpret_cast<ConcatNode *>(node);
                     return std::move(from_ast(concat->left_operand).concatenate(
                         from_ast(concat->right_operand)
-                        ));
+                    ));
                 }
                 case UNION: {
                     auto union_ = reinterpret_cast<UnionNode *>(node);
                     return std::move(from_ast(union_->left_operand).union_(
                         from_ast(union_->right_operand)
-                        ));
+                    ));
                 }
                 default:
                     throw std::runtime_error("Unknown node kind");
@@ -262,8 +283,52 @@ struct Regex {
             nfa.all_nodes.push_back(node);
             nfa.lastpos.push_back(node);
 
-            for (unsigned int i = 0; i < 128; ++i) {
+            for (int i = 0; i < 128; ++i) {
                 char c = static_cast<char>(i);
+                nfa.start_node.edges[c].insert({node, {}});
+            }
+
+            return nfa;
+        }
+
+        static NFA for_small_d(int id) {
+            NFA nfa;
+            auto node = new Node(id);
+            node->empty_edge.emplace<GroupToTokens>();
+            nfa.all_nodes.push_back(node);
+            nfa.lastpos.push_back(node);
+
+            for (signed char c = '0'; c <= '9'; ++c) {
+                nfa.start_node.edges[c].insert({node, {}});
+            }
+
+            return nfa;
+        }
+
+        static NFA for_small_s(int id) {
+            NFA nfa;
+            auto node = new Node(id);
+            node->empty_edge.emplace<GroupToTokens>();
+            nfa.all_nodes.push_back(node);
+            nfa.lastpos.push_back(node);
+
+            for (char c : " \n\t\n\r\f\v") {
+                nfa.start_node.edges[c].insert({node, {}});
+            }
+
+            return nfa;
+        }
+
+        static NFA for_small_w(int id) {
+            NFA nfa;
+            auto node = new Node(id);
+            node->empty_edge.emplace<GroupToTokens>();
+            nfa.all_nodes.push_back(node);
+            nfa.lastpos.push_back(node);
+
+            for (char c : "_0123456789"
+                          "abcdefghijklmnopqrstuvwxyz"
+                          "ABCDEFGHIJKLMNOPQRSTUVWXYZ") {
                 nfa.start_node.edges[c].insert({node, {}});
             }
 
@@ -301,7 +366,7 @@ struct Regex {
 
             for (auto lastpos_node : lastpos) {
                 std::get<GroupToTokens>(lastpos_node->empty_edge)[group]
-                .push_back(GroupToken::LEAVE);
+                    .push_back(GroupToken::LEAVE);
             }
 
             return *this;
@@ -343,7 +408,7 @@ struct Regex {
                 for (auto lastpos_node : lastpos) {
                     std::get<GroupToTokens>(lastpos_node->empty_edge).insert(
                         empty_right->cbegin(), empty_right->cend()
-                        );
+                    );
                 }
 
                 lastpos.splice(lastpos.cend(), other.lastpos);
@@ -402,11 +467,12 @@ struct Regex {
 
                     for (auto &[firstpos_node, firstpos_tokens] : start_edges_for_c) {
                         while (edge_it != lastpos_node_edges_for_c.end() &&
-                        edge_it->first < firstpos_node) {
+                               edge_it->first < firstpos_node) {
                             ++edge_it;
                         }
 
-                        if (edge_it != lastpos_node_edges_for_c.end() && edge_it->first == firstpos_node) {
+                        if (edge_it != lastpos_node_edges_for_c.end() &&
+                            edge_it->first == firstpos_node) {
                             ++edge_it;
                         } else {
                             GroupToTokens new_tokens(lastpos_node_empty_edge);
@@ -414,7 +480,7 @@ struct Regex {
                                               firstpos_tokens.cend());
                             lastpos_node_edges_for_c.emplace_hint(
                                 edge_it, firstpos_node, std::move(new_tokens)
-                                );
+                            );
                         }
                     }
                 }

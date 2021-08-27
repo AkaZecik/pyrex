@@ -22,6 +22,12 @@ enum class TokenType {
     CHAR,
     DIGIT,
     DOT,
+    SMALL_D,
+    BIG_D,
+    SMALL_S,
+    BIG_S,
+    SMALL_W,
+    BIG_W,
     EMPTY,
     NOTHING,
     END,
@@ -103,9 +109,9 @@ struct Tokenizer {
 
         switch (c) {
             case '#':
-                return Token(TokenType::NOTHING);
+                return Token{TokenType::NOTHING};
             case 'e':
-                return Token(TokenType::EMPTY);
+                return Token{TokenType::EMPTY};
             case 'n':
                 return {TokenType::CHAR, '\n'};
             case 'r':
@@ -134,6 +140,18 @@ struct Tokenizer {
                 return {TokenType::CHAR, '}'};
             case '.':
                 return {TokenType::CHAR, '.'};
+            case 'd':
+                return Token{TokenType::SMALL_D};
+            case 'D':
+                return Token{TokenType::BIG_D};
+            case 's':
+                return Token{TokenType::SMALL_S};
+            case 'S':
+                return Token{TokenType::BIG_S};
+            case 'w':
+                return Token{TokenType::SMALL_W};
+            case 'W':
+                return Token{TokenType::BIG_W};
             case 'x':
                 return {TokenType::CHAR, parse_hex()};
             default:
