@@ -5,6 +5,7 @@
 #ifndef NFA_CPP
 #define NFA_CPP
 
+#include <unordered_set>
 #include <set>
 #include <list>
 #include <map>
@@ -63,9 +64,9 @@ struct Regex {
 
             void connect_to_nfa(NFA const &nfa) {
                 for (auto const &[chr, edges_for_c] : nfa.start_node.edges) {
-                    // maybe create iterator over edges from current node and implement
-                    // the same logic as in star()? Then you could reuse it in both
-                    // places
+                    // maybe create iterator over edges[chr] from current node and
+                    // implement the same logic as in star()? Then you could reuse it
+                    // in both places
                     for (auto &[nbh, tokens] : edges_for_c) {
                         GroupToTokens new_tokens(*empty_edge);
                         new_tokens.insert(tokens.cbegin(), tokens.cend());
@@ -83,9 +84,11 @@ struct Regex {
                         empty_edge.emplace();
                     }
 
-                    empty_edge->insert(node->empty_edge->cbegin(), node->empty_edge->cend());
+                    empty_edge->insert(node->empty_edge->cbegin(),
+                                       node->empty_edge->cend());
                 } else {
                     // do we want that for union???
+                    // maybe separate methods for "union" and "intersect" empty edges
                     empty_edge.reset();
                 }
             }
@@ -151,54 +154,110 @@ struct Regex {
             }
         }
 
-        bool traverse(std::string const &text, std::size_t start, std::size_t end,
-                      Group *group) {
-            std::vector<Node *> old_state, new_state;
-            std::unordered_map<Node *, bool> visited;
+        typedef std::pair<std::size_t, std::size_t> Match;
+        typedef std::set<Match> Matches;
+        typedef std::optional<Matches> MatchResult;
 
-            for (auto node : all_nodes) {
-                visited[node] = false;
+        MatchResult traverse(
+            std::string const &text, std::size_t start, std::size_t end, Group *group
+        ) {
+            auto text_it = text.cbegin();
+            auto text_end = text.cend();
+
+            if (text_it == text_end) {
+                if (start_node.empty_edge) {
+                    return {{{0, 0}}};
+                } else {
+                    return {};
+                }
             }
 
-            new_state.push_back(&start_node);
+            struct Pawn {
+                std::set<std::size_t> entered;
+                Matches matches;
+            };
+
+            std::unordered_map<Node *, Pawn> old_pawns, new_pawns;
+            old_pawns[&start_node];
             std::size_t pos = 0;
 
-            while (!new_state.empty()) {
-                if (pos == text.size()) {
-                    for (auto node : new_state) {
-                        if (node->empty_edge) {
-                            return true;
-                        }
-                    }
+            while (!old_pawns.empty()) {
+                char c = *text_it;
+                ++text_it;
 
-                    return false;
-                }
+                for (auto &[old_node, old_pawn]: old_pawns) {
+                    auto edges_for_c_it = old_node->edges.find(c);
 
-                std::swap(new_state, old_state);
-                char c = text[pos];
-                pos += 1;
+                    if (edges_for_c_it != old_node->edges.cend()) {
+                        auto edges_it = edges_for_c_it->second.begin();
+                        auto edges_end = edges_for_c_it->second.end();
 
-                while (!old_state.empty()) {
-                    auto top = old_state.back();
-                    old_state.pop_back();
-                    auto edges_for_c_it = top->edges.find(c);
+                        while (edges_it != edges_end) {
+                            auto &[new_node, tokens] = *edges_it;
+                            auto &new_pawn = new_pawns[new_node];
+                            auto group_tokens_it = tokens.find(group);
 
-                    if (edges_for_c_it != top->edges.end()) {
-                        for (auto &[nbh, tokens] : edges_for_c_it->second) {
-                            if (!visited[nbh]) {
-                                visited[nbh] = true;
-                                new_state.push_back(nbh);
+                            if (group_tokens_it != tokens.cend()) {
+                                for (auto token : group_tokens_it->second) {
+                                    switch (token) {
+                                        case GroupToken::ENTER: {
+                                            new_pawn.entered.insert(pos);
+                                            break;
+                                        }
+                                        case GroupToken::LEAVE: {
+                                            for (auto begin : old_pawn.entered) {
+                                                new_pawn.matches.emplace(begin, pos);
+                                            }
+
+                                            old_pawn.entered.clear();
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (++edges_it == edges_end) { // last edge on that character
+                                new_pawn.entered.merge(old_pawn.entered);
+                                new_pawn.matches.merge(old_pawn.matches);
+                            } else {
+                                new_pawn.entered.insert(
+                                    old_pawn.entered.cbegin(), old_pawn.entered.cend()
+                                );
+                                new_pawn.matches.insert(
+                                    old_pawn.matches.cbegin(), old_pawn.matches.cend()
+                                );
                             }
                         }
                     }
                 }
 
-                for (auto node : new_state) {
-                    visited[node] = false;
+                if (text_it == text_end) {
+                    bool matched = false;
+                    Matches result;
+
+                    for (auto &[node, pawn] : new_pawns) {
+                        if (node->empty_edge) {
+                            matched = true;
+
+                            for (auto begin : pawn.entered) {
+                                result.emplace(begin, pos);
+                            }
+                        }
+                    }
+
+                    if (matched) {
+                        return result;
+                    } else {
+                        return {};
+                    }
                 }
+
+                old_pawns.clear();
+                std::swap(new_pawns, old_pawns);
+                pos += 1;
             }
 
-            return false;
+            return {};
         }
 
         static NFA from_ast(::Node *node) {
