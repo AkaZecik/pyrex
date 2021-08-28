@@ -9,8 +9,7 @@
 #include <list>
 #include <map>
 #include <unordered_map>
-#include <variant>
-#include <iostream>
+#include <optional>
 #include "ast.cpp"
 
 /*
@@ -54,13 +53,47 @@ struct Regex {
             //  searching for them should be possible by just a character.
             //  range is compared to
             Edges edges;
-            std::variant<std::monostate, GroupToTokens> empty_edge;
+            std::optional<GroupToTokens> empty_edge;
             int id; // can be removed
             char c; // TODO: can be removed
 
             explicit Node(int id) : id(id), c{} {}
 
             Node(int id, char c) : id(id), c(c) {}
+
+            void connect_to_nfa(NFA const &nfa) {
+                for (auto const &[chr, edges_for_c] : nfa.start_node.edges) {
+                    // maybe create iterator over edges from current node and implement
+                    // the same logic as in star()? Then you could reuse it in both
+                    // places
+                    for (auto &[nbh, tokens] : edges_for_c) {
+                        GroupToTokens new_tokens(*empty_edge);
+                        new_tokens.insert(tokens.cbegin(), tokens.cend());
+                        edges[chr].emplace(nbh, std::move(new_tokens));
+                    }
+                }
+
+                merge_empty_edges(&nfa.start_node);
+            };
+
+            void merge_empty_edges(Node const *node) {
+                if (node->empty_edge) {
+                    if (!empty_edge) {
+                        // TODO: maybe require method to be called on lastpos nodes?
+                        empty_edge.emplace();
+                    }
+
+                    empty_edge->insert(node->empty_edge->cbegin(), node->empty_edge->cend());
+                } else {
+                    // do we want that for union???
+                    empty_edge.reset();
+                }
+            }
+
+            void clear() {
+                edges.clear();
+                empty_edge.reset();
+            }
         };
 
         Node start_node{0};
@@ -70,7 +103,6 @@ struct Regex {
         NFA() = default;
 
         NFA(NFA const &other) {
-//            std::cout << "NFA(NFA const &)" << std::endl;
             std::unordered_map<Node const *, Node *> new_nodes;
 
             for (auto orig_node : other.all_nodes) {
@@ -78,7 +110,7 @@ struct Regex {
                 new_nodes[orig_node] = new_node;
                 all_nodes.push_back(new_node);
 
-                if (std::holds_alternative<GroupToTokens>(orig_node->empty_edge)) {
+                if (orig_node->empty_edge) {
                     lastpos.push_back(new_node);
                 }
             }
@@ -134,7 +166,7 @@ struct Regex {
             while (!new_state.empty()) {
                 if (pos == text.size()) {
                     for (auto node : new_state) {
-                        if (std::holds_alternative<GroupToTokens>(node->empty_edge)) {
+                        if (node->empty_edge) {
                             return true;
                         }
                     }
@@ -190,21 +222,21 @@ struct Regex {
                     return for_small_d(small_d->id);
                 }
                 case BIG_D: {
-                    // TODO
+                    throw std::runtime_error("Not implemented");
                 }
                 case SMALL_S: {
                     auto small_s = reinterpret_cast<SmallSNode *>(node);
                     return for_small_s(small_s->id);
                 }
                 case BIG_S: {
-                    // TODO
+                    throw std::runtime_error("Not implemented");
                 }
                 case SMALL_W: {
                     auto small_w = reinterpret_cast<SmallWNode *>(node);
                     return for_small_w(small_w->id);
                 }
                 case BIG_W: {
-                    // TODO
+                    throw std::runtime_error("Not implemented");
                 }
                 case GROUP: {
                     auto group = reinterpret_cast<GroupNode *>(node);
@@ -262,14 +294,14 @@ struct Regex {
 
         static NFA for_empty() {
             NFA nfa;
-            nfa.start_node.empty_edge.emplace<GroupToTokens>();
+            nfa.start_node.empty_edge.emplace();
             return nfa;
         }
 
         static NFA for_char(int id, char c) {
             NFA nfa;
             auto node = new Node(id, c);
-            node->empty_edge.emplace<GroupToTokens>();
+            node->empty_edge.emplace();
             nfa.all_nodes.push_back(node);
             nfa.lastpos.push_back(node);
             nfa.start_node.edges[c].insert({node, {}});
@@ -279,7 +311,7 @@ struct Regex {
         static NFA for_dot(int id) {
             NFA nfa;
             auto node = new Node(id);
-            node->empty_edge.emplace<GroupToTokens>();
+            node->empty_edge.emplace();
             nfa.all_nodes.push_back(node);
             nfa.lastpos.push_back(node);
 
@@ -294,7 +326,7 @@ struct Regex {
         static NFA for_small_d(int id) {
             NFA nfa;
             auto node = new Node(id);
-            node->empty_edge.emplace<GroupToTokens>();
+            node->empty_edge.emplace();
             nfa.all_nodes.push_back(node);
             nfa.lastpos.push_back(node);
 
@@ -308,7 +340,7 @@ struct Regex {
         static NFA for_small_s(int id) {
             NFA nfa;
             auto node = new Node(id);
-            node->empty_edge.emplace<GroupToTokens>();
+            node->empty_edge.emplace();
             nfa.all_nodes.push_back(node);
             nfa.lastpos.push_back(node);
 
@@ -322,7 +354,7 @@ struct Regex {
         static NFA for_small_w(int id) {
             NFA nfa;
             auto node = new Node(id);
-            node->empty_edge.emplace<GroupToTokens>();
+            node->empty_edge.emplace();
             nfa.all_nodes.push_back(node);
             nfa.lastpos.push_back(node);
 
@@ -352,8 +384,8 @@ struct Regex {
         }
 
         NFA &for_group(Group *group) {
-            if (auto empty_edge = std::get_if<GroupToTokens>(&start_node.empty_edge)) {
-                auto &tokens = (*empty_edge)[group];
+            if (start_node.empty_edge) {
+                auto &tokens = (*start_node.empty_edge)[group];
                 tokens.push_back(GroupToken::ENTER);
                 tokens.push_back(GroupToken::LEAVE);
             }
@@ -365,102 +397,97 @@ struct Regex {
             }
 
             for (auto lastpos_node : lastpos) {
-                std::get<GroupToTokens>(lastpos_node->empty_edge)[group]
-                    .push_back(GroupToken::LEAVE);
+                (*lastpos_node->empty_edge)[group].push_back(GroupToken::LEAVE);
             }
 
             return *this;
         }
 
         NFA &qmark() {
-            if (std::holds_alternative<std::monostate>(start_node.empty_edge)) {
-                start_node.empty_edge.emplace<GroupToTokens>();
+            if (!start_node.empty_edge) {
+                start_node.empty_edge.emplace();
             }
 
             return *this;
         }
 
         NFA &concatenate(NFA other) {
-            auto empty_left = std::get_if<GroupToTokens>(&start_node.empty_edge);
-            auto empty_right = std::get_if<GroupToTokens>(&other.start_node.empty_edge);
-
-            auto connect_to_other = [&other](NFA::Node *node) {
-                auto const &empty_edge = std::get<GroupToTokens>(node->empty_edge);
-
-                for (auto const &[c, edges_for_c] : other.start_node.edges) {
-                    for (auto &[nbh, tokens] : edges_for_c) {
-                        GroupToTokens new_tokens(empty_edge);
-                        new_tokens.insert(tokens.cbegin(), tokens.cend());
-                        node->edges[c].emplace(nbh, std::move(new_tokens));
-                    }
-                }
-            };
+//            auto connect_to_other = [&other](NFA::Node *node) {
+//                for (auto const &[c, edges_for_c] : other.start_node.edges) {
+//                    for (auto &[nbh, tokens] : edges_for_c) {
+//                        GroupToTokens new_tokens(*node->empty_edge);
+//                        new_tokens.insert(tokens.cbegin(), tokens.cend());
+//                        node->edges[c].emplace(nbh, std::move(new_tokens));
+//                    }
+//                }
+//            };
 
             for (auto lastpos_node : lastpos) {
-                connect_to_other(lastpos_node);
+                lastpos_node->connect_to_nfa(other);
+//                connect_to_other(lastpos_node);
             }
 
-            if (empty_left) {
-                connect_to_other(&start_node);
+            if (start_node.empty_edge) {
+                start_node.connect_to_nfa(other);
+//                connect_to_other(&start_node);
             }
 
-            if (empty_right) {
-                for (auto lastpos_node : lastpos) {
-                    std::get<GroupToTokens>(lastpos_node->empty_edge).insert(
-                        empty_right->cbegin(), empty_right->cend()
-                    );
-                }
+            if (other.start_node.empty_edge) {
+//                for (auto lastpos_node : lastpos) {
+//                    lastpos_node->empty_edge->insert(
+//                        other.start_node.empty_edge->cbegin(),
+//                        other.start_node.empty_edge->cend()
+//                    );
+//                }
 
                 lastpos.splice(lastpos.cend(), other.lastpos);
             } else {
-                for (auto lastpos_node : lastpos) {
-                    lastpos_node->empty_edge.emplace<std::monostate>();
-                }
+//                for (auto lastpos_node : lastpos) {
+//                    lastpos_node->empty_edge.reset();
+//                }
 
                 std::swap(lastpos, other.lastpos);
                 other.lastpos.clear();
             }
 
-            if (empty_left && empty_right) {
-                empty_left->merge(*empty_right);
-            } else {
-                start_node.empty_edge.emplace<std::monostate>();
-            }
+//            if (start_node.empty_edge && other.start_node.empty_edge) {
+//                start_node.empty_edge->merge(*other.start_node.empty_edge);
+//            } else {
+//                start_node.empty_edge.reset();
+//            }
 
             all_nodes.splice(all_nodes.cend(), other.all_nodes);
-            other.start_node.edges.clear();
-            other.start_node.empty_edge.emplace<std::monostate>();
+            other.start_node.clear();
+//            other.start_node.edges.clear();
+//            other.start_node.empty_edge.reset();
             return *this;
         }
 
         NFA &union_(NFA other) {
-            auto empty_left = std::get_if<GroupToTokens>(&start_node.empty_edge);
-            auto empty_right = std::get_if<GroupToTokens>(&other.start_node.empty_edge);
+            // TODO: check this comment
+//            for (auto &[c, other_start_edges_for_c] : other.start_node.edges) {
+//                start_node.edges[c].merge(other_start_edges_for_c);
+//            }
 
-            for (auto &[c, other_start_edges_for_c] : other.start_node.edges) {
-                start_node.edges[c].merge(other_start_edges_for_c);
-            }
+            start_node.connect_to_nfa(other); // is it correct for empty edge???
 
-            if (empty_right) {
-                if (empty_left) {
-                    empty_left->merge(*empty_right);
+            if (other.start_node.empty_edge) {
+                if (start_node.empty_edge) {
+                    start_node.empty_edge->merge(*other.start_node.empty_edge);
                 } else {
-                    start_node.empty_edge = *empty_right;
+                    start_node.empty_edge = *other.start_node.empty_edge;
                 }
             }
 
             all_nodes.splice(all_nodes.cend(), other.all_nodes);
             lastpos.splice(lastpos.cend(), other.lastpos);
             other.start_node.edges.clear();
-            other.start_node.empty_edge.emplace<std::monostate>();
+            other.start_node.empty_edge.reset();
             return *this;
         }
 
         NFA &star() {
             for (auto lastpos_node : lastpos) {
-                auto &lastpos_node_empty_edge = std::get<GroupToTokens>(
-                    lastpos_node->empty_edge);
-
                 for (auto &[c, start_edges_for_c] : start_node.edges) {
                     auto &lastpos_node_edges_for_c = lastpos_node->edges[c];
                     auto edge_it = lastpos_node_edges_for_c.begin();
@@ -475,7 +502,7 @@ struct Regex {
                             edge_it->first == firstpos_node) {
                             ++edge_it;
                         } else {
-                            GroupToTokens new_tokens(lastpos_node_empty_edge);
+                            GroupToTokens new_tokens(*lastpos_node->empty_edge);
                             new_tokens.insert(firstpos_tokens.cbegin(),
                                               firstpos_tokens.cend());
                             lastpos_node_edges_for_c.emplace_hint(
@@ -486,8 +513,8 @@ struct Regex {
                 }
             }
 
-            if (std::holds_alternative<std::monostate>(start_node.empty_edge)) {
-                start_node.empty_edge.emplace<GroupToTokens>();
+            if (!start_node.empty_edge) {
+                start_node.empty_edge.emplace();
             }
 
             return *this;
@@ -510,8 +537,8 @@ struct Regex {
             }
 
             if (min == 0) {
-                if (std::holds_alternative<std::monostate>(start_node.empty_edge)) {
-                    start_node.empty_edge.emplace<GroupToTokens>();
+                if (!start_node.empty_edge) {
+                    start_node.empty_edge.emplace();
                 }
             }
 
@@ -521,9 +548,9 @@ struct Regex {
 
             std::vector<NFA> copies(max - 1, *this);
 
-            if (std::holds_alternative<std::monostate>(start_node.empty_edge)) {
+            if (!start_node.empty_edge) {
                 for (int i = min - 1; i < max - 1; ++i) {
-                    copies[i].start_node.empty_edge.emplace<GroupToTokens>();
+                    copies[i].start_node.empty_edge.emplace();
                 }
             }
 

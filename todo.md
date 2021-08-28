@@ -8,9 +8,11 @@
 * reprezentacja przedzialu znakow za pomoca jednego wierzcholka i wielu krawedzi
 * reprezentacja przedzialu znakow za pomoca jednego wierzcholka i jednej krawedzi
 * byc moze w obecnej implementacji nie jest potrzebne trzymanie znaku na wierzcholku
-  i wystarcza znaki na krawedziach 
+  i wystarcza znaki na krawedziach
 * usunac 'id' z lisci w AST
-
+* usunac 'id' i 'c' z wierzcholkow w NFA
+* ustalanie alfabetu przed parsowaniem
+* optymalizowanie skladania operatorow, np. R**, R*?, R?*, ((R*)*)*, R*{3}, etc.
 
 
 
