@@ -3,7 +3,7 @@
 #include <utility>
 
 namespace pyrex {
-    AST::AST(std::shared_ptr<Node> root) : root(std::move(root)) {}
+    AST::AST(std::shared_ptr<Node> root) : root{std::move(root)} {}
 
     AST::Node *AST::get_root() {
         return root.get();

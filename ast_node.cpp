@@ -4,6 +4,11 @@
 #include <utility>
 #include <sstream>
 
+/*
+ * TODO:
+ *  - check for correctness of std::string AST::CharNode::to_string(), specifically of \xNN escapes
+ */
+
 namespace pyrex {
     /****************************
      *        Leaf nodes        *
@@ -72,7 +77,7 @@ namespace pyrex {
                     return std::to_string(chr);
                 } else {
                     std::ostringstream oss;
-                    oss << "\\x" << std::hex << chr; // TODO: check for correctness
+                    oss << "\\x" << std::hex << chr;
                     return oss.str();
                 }
             }

@@ -3,9 +3,15 @@
 
 #include <utility>
 #include <memory>
+#include <vector>
+
+/* TODO:
+ *  - handle duplicate group names
+ */
 
 namespace pyrex {
     struct AST {
+    public:
         struct Node {
             enum class Kind {
                 /* leaves */
@@ -277,7 +283,7 @@ namespace pyrex {
 
         static AST for_nothing();
         static AST for_empty();
-        static AST for_char(char c);
+        static AST for_char(char chr);
         static AST for_dot();
         static AST for_small_d();
         static AST for_small_s();
@@ -294,7 +300,73 @@ namespace pyrex {
         static AST percent(AST const &left, AST const &right);
 
     private:
-        struct Parser; // TODO
+        struct Parser {
+            enum class TokenType {
+                LPAREN,
+                RPAREN,
+                LCURLY,
+                RCURLY,
+                STAR,
+                PLUS,
+                UNION,
+                QMARK,
+                CHAR,
+                DIGIT,
+                DOT,
+                SMALL_D,
+                BIG_D,
+                SMALL_S,
+                BIG_S,
+                SMALL_W,
+                BIG_W,
+                EMPTY,
+                NOTHING,
+                END,
+            };
+
+            struct Token {
+                TokenType const type;
+                char const value{};
+
+                explicit Token(TokenType type);
+                Token(TokenType type, char value);
+            };
+
+            struct Tokenizer {
+                std::string const &regex;
+                std::size_t curr_pos;
+
+                explicit Tokenizer(std::string const &regex);
+                Tokenizer() = delete;
+                Tokenizer(Tokenizer const &) = delete;
+                Tokenizer(Tokenizer &&) = delete;
+
+                std::vector<Token> get_all_tokens();
+                Token get_token();
+                Token parse_escape();
+                Token parse_hex();
+            };
+
+            std::string const &regex;
+            std::vector<Token> tokens;
+            std::vector<AST> results;
+
+            explicit Parser(std::string const &regex);
+            Parser() = delete;
+            Parser(Parser const &) = delete;
+            Parser(Parser &&) = delete;
+            ~Parser();
+
+            AST parse();
+            bool can_insert_concat(Token before, Token after);
+            static inline bool before_concat(Token token);
+            static inline bool after_concat(Token token);
+            void parse_range();
+            void push_node();
+            void interpret_operator(Operator *op);
+            void drop_operators_precedence(int precedence);
+            void drop_operators_until_group();
+        };
     };
 }
 
