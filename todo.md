@@ -13,7 +13,9 @@
 * usunac 'id' i 'c' z wierzcholkow w NFA
 * ustalanie alfabetu przed parsowaniem
 * optymalizowanie skladania operatorow, np. R**, R*?, R?*, ((R*)*)*, R*{3}, etc.
-
+* rename "empty edge" to "epsilon edge"
+* rozbij nfa.cpp na nfa.h+nfa.cpp oraz rozbij nfa.cpp na czesci, ktore maja wspolne przeznaczenie
+  np. traverse w innym pliku niz operatory, Node tez moze w innym pliku
 
 
 
