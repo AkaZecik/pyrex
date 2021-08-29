@@ -131,9 +131,9 @@ namespace pyrex {
         };
 
         struct NamedCGroupNode : GroupNode {
-            using GroupNode::GroupNode;
-
             std::string const name;
+
+            NamedCGroupNode(std::shared_ptr<Node>, std::string);
 
             Kind kind() override;
             std::string to_string() override;
@@ -281,6 +281,8 @@ namespace pyrex {
 
         Node *get_root();
 
+        static AST from_regex(std::string const &regex);
+
         static AST for_nothing();
         static AST for_empty();
         static AST for_char(char chr);
@@ -288,6 +290,9 @@ namespace pyrex {
         static AST for_small_d();
         static AST for_small_s();
         static AST for_small_w();
+        static AST numbered_cgroup(AST const &ast);
+        static AST named_cgroup(AST const &ast, const std::string& name);
+        static AST non_cgroup(AST const &ast);
         static AST qmark(AST const &ast);
         static AST star(AST const &ast);
         static AST plus(AST const &ast);

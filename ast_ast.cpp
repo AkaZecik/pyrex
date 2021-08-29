@@ -9,6 +9,11 @@ namespace pyrex {
         return root.get();
     }
 
+    AST AST::from_regex(const std::string &regex) {
+        Parser parser(regex);
+        return parser.parse();
+    }
+
     AST AST::for_nothing() {
         return AST{std::make_shared<NothingNode>()};
     }
@@ -35,6 +40,18 @@ namespace pyrex {
 
     AST AST::for_small_w() {
         return AST{std::make_shared<SmallWNode>()};
+    }
+
+    AST AST::numbered_cgroup(AST const &ast) {
+        return AST{std::make_shared<NumberedCGroupNode>(ast.root)};
+    }
+
+    AST AST::named_cgroup(AST const &ast, const std::string& name) {
+        return AST{std::make_shared<NamedCGroupNode>(ast.root, name)};
+    }
+
+    AST AST::non_cgroup(AST const &ast) {
+        return AST{std::make_shared<NonCGroupNode>(ast.root)};
     }
 
     AST AST::qmark(AST const &ast) {

@@ -17,6 +17,7 @@
 * rozbij nfa.cpp na nfa.h+nfa.cpp oraz rozbij nfa.cpp na czesci, ktore maja wspolne przeznaczenie
   np. traverse w innym pliku niz operatory, Node tez moze w innym pliku
 * ograniczyc liczbe stanow, ktore moze miec NFA/DFA do pewnej stalej
+* handlowanie errorow tokenizacji i parsowania (osobny plik na errory?)
 
 
 
