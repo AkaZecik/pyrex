@@ -33,11 +33,12 @@ namespace pyrex {
 
                 /* binary operators */
                 CONCAT,
-                UNION,
                 PERCENT,
+                UNION,
             };
 
             virtual Kind kind() = 0;
+            virtual int precedence() = 0;
             virtual std::string to_string() = 0;
         };
 
@@ -46,6 +47,7 @@ namespace pyrex {
          ****************************/
 
         struct LeafNode : Node {
+            int precedence() override;
         };
 
         struct NothingNode : LeafNode {
@@ -110,6 +112,7 @@ namespace pyrex {
 
             explicit GroupNode(std::shared_ptr<Node>);
 
+            int precedence() override;
             InternalNode::Type internal_node_type() override;
             int arity() override;
         };
@@ -142,8 +145,8 @@ namespace pyrex {
          ***************************/
 
         struct Operator : InternalNode {
-            virtual int precedence() = 0;
             InternalNode::Type internal_node_type() override;
+            virtual std::string operator_repr() = 0;
         };
 
         struct UnaryOperator : Operator {
@@ -173,7 +176,7 @@ namespace pyrex {
 
             Kind kind() override;
             int precedence() override;
-            std::string to_string() override;
+            std::string operator_repr() override;
         };
 
         struct StarNode : UnaryOperator {
@@ -181,7 +184,7 @@ namespace pyrex {
 
             Kind kind() override;
             int precedence() override;
-            std::string to_string() override;
+            std::string operator_repr() override;
         };
 
         struct PlusNode : UnaryOperator {
@@ -189,7 +192,7 @@ namespace pyrex {
 
             Kind kind() override;
             int precedence() override;
-            std::string to_string() override;
+            std::string operator_repr() override;
         };
 
         struct PowerNode : UnaryOperator {
@@ -199,7 +202,7 @@ namespace pyrex {
 
             Kind kind() override;
             int precedence() override;
-            std::string to_string() override;
+            std::string operator_repr() override;
         };
 
         struct MinNode : UnaryOperator {
@@ -209,7 +212,7 @@ namespace pyrex {
 
             Kind kind() override;
             int precedence() override;
-            std::string to_string() override;
+            std::string operator_repr() override;
         };
 
         struct MaxNode : UnaryOperator {
@@ -219,7 +222,7 @@ namespace pyrex {
 
             Kind kind() override;
             int precedence() override;
-            std::string to_string() override;
+            std::string operator_repr() override;
         };
 
         struct RangeNode : UnaryOperator {
@@ -230,7 +233,7 @@ namespace pyrex {
 
             Kind kind() override;
             int precedence() override;
-            std::string to_string() override;
+            std::string operator_repr() override;
         };
 
         /**********************************
@@ -242,15 +245,7 @@ namespace pyrex {
 
             Kind kind() override;
             int precedence() override;
-            std::string to_string() override;
-        };
-
-        struct UnionNode : BinaryOperator {
-            using BinaryOperator::BinaryOperator;
-
-            Kind kind() override;
-            int precedence() override;
-            std::string to_string() override;
+            std::string operator_repr() override;
         };
 
         struct PercentNode : BinaryOperator {
@@ -258,7 +253,15 @@ namespace pyrex {
 
             Kind kind() override;
             int precedence() override;
-            std::string to_string() override;
+            std::string operator_repr() override;
+        };
+
+        struct UnionNode : BinaryOperator {
+            using BinaryOperator::BinaryOperator;
+
+            Kind kind() override;
+            int precedence() override;
+            std::string operator_repr() override;
         };
 
     private:
