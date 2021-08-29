@@ -282,20 +282,20 @@ namespace pyrex {
         static AST for_small_d();
         static AST for_small_s();
         static AST for_small_w();
-        static AST concat(AST const &left, AST const &right);
-        static AST union_(AST const &left, AST const &right);
-        static AST percent(AST const &left, AST const &right);
+        static AST qmark(AST const &ast);
         static AST star(AST const &ast);
         static AST plus(AST const &ast);
         static AST power(AST const &ast, int power);
         static AST min(AST const &ast, int min);
         static AST max(AST const &ast, int max);
         static AST range(AST const &ast, int min, int max);
-        static AST qmark(AST const &ast);
+        static AST concat(AST const &left, AST const &right);
+        static AST union_(AST const &left, AST const &right);
+        static AST percent(AST const &left, AST const &right);
+
+    private:
+        struct Parser; // TODO
     };
-
-
-    struct Parser; // TODO
 }
 
 #endif //PYREX_AST_H
