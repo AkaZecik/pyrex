@@ -1,7 +1,3 @@
-//
-// Created by bercik on 13.08.2021.
-//
-
 #ifndef TOKENIZER_CPP
 #define TOKENIZER_CPP
 

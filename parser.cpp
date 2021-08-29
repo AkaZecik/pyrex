@@ -1,7 +1,3 @@
-//
-// Created by bercik on 13.08.2021.
-//
-
 #ifndef PARSER_CPP
 #define PARSER_CPP
 

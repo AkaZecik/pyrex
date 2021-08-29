@@ -1,7 +1,3 @@
-//
-// Created by bercik on 14.08.2021.
-//
-
 #ifndef NFA_CPP
 #define NFA_CPP
 
@@ -13,21 +9,6 @@
 #include <optional>
 #include "ast.cpp"
 
-/*
- * Alphabet mozna zrobic tak, ze jest klasa Char, ktora ma w sobie std::variant
- * dla monostate, char, range, charset, etc.
- *
- * Uwaga: kropka, \w, itp. powinny w NFA pozostac wciaz takimi znakami, nawet jak
- * w regexie pojawia sie kazda mozliwa litera.
- *
- * Tekst powinien byc podawany poprzez iterator, zeby mozna bylo obslugiwac literke \0
- *
- * mozna optymalizowac tak, ze jak mamy pionki chodzace po NFA,
- * to i tak rownolegle chodzimy po DFA. Jak dojdziemy do pozycji "end" w stringu
- * to przestajemy zapamietywac nowe substringi, ale dalej pamietamy pionki, ktore
- * chodzily po NFA, z tym, ze juz nie tworzymy nowych pionkow, a te ktore znikly
- * po prostu znikly. Jak liczba pionkow sie skonczy albo dojdziemy do stanu koncowego
- */
 
 struct Regex {
     struct NFA;
@@ -600,6 +581,16 @@ struct Regex {
     std::map<std::string, Group> named_groups;
     std::optional<std::string> regex;
     std::optional<NFA> nfaa;
+
+    explicit Regex(std::string regex) : regex(regex) {}
+
+    Regex(Regex const &other) = default;
+
+    Regex(Regex &&) = default;
+
+    Regex concat(Regex other) const {
+        // concat ASTs, create new regex with just that AST, return it
+    }
 };
 
 #endif // NFA_CPP
