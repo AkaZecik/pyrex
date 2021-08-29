@@ -161,6 +161,7 @@ struct Parser {
 
     void parse_range() {
         // TODO: check if values are not starting with 0s
+        // TODO: assert 0 <= min <= max
         std::string num1, num2;
 
         while (tokens[curr_pos].type == TokenType::DIGIT) {
@@ -183,7 +184,7 @@ struct Parser {
             curr_pos += 1;
 
             if (num1.empty() && num2.empty()) {
-                throw std::runtime_error("Incorrect value in range operator");
+                throw std::runtime_error("Incorrect chr in range operator");
             } else if (num1.empty()) {
                 interpret_operator(new MaxNode(std::stoi(num2)));
             } else if (num2.empty()) {
@@ -193,7 +194,7 @@ struct Parser {
             }
         } else {
             if (num1.empty()) {
-                throw std::runtime_error("Incorrect value in range operator");
+                throw std::runtime_error("Incorrect chr in range operator");
             } else if (tokens[curr_pos].type != TokenType::RCURLY) {
                 throw std::runtime_error("Unclosed range operator");
             }

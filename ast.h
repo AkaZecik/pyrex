@@ -61,7 +61,7 @@ namespace pyrex {
         };
 
         struct CharNode : LeafNode {
-            char const value;
+            char const chr;
 
             explicit CharNode(char);
 

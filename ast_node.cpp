@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <utility>
+#include <sstream>
 
 namespace pyrex {
     /****************************
@@ -28,15 +29,54 @@ namespace pyrex {
         return "\\e";
     }
 
-    AST::CharNode::CharNode(char chr) : value{chr} {}
+    AST::CharNode::CharNode(char chr) : chr{chr} {}
 
     AST::Node::Kind AST::CharNode::kind() {
         return Node::Kind::CHAR;
     }
 
     std::string AST::CharNode::to_string() {
-        // TODO
-        return "";
+        switch (chr) {
+            case '\n':
+                return "\\n";
+            case '\r':
+                return "\\r";
+            case '\f':
+                return "\\f";
+            case '\t':
+                return "\\t";
+            case '\\':
+                return "\\\\";
+            case '.':
+                return "\\.";
+            case '(':
+                return "\\(";
+            case ')':
+                return "\\)";
+            case '{':
+                return "\\{";
+            case '}':
+                return "\\}";
+            case '?':
+                return "\\?";
+            case '*':
+                return "\\*";
+            case '+':
+                return "\\+";
+            case '%':
+                return "\\%";
+            case '|':
+                return "\\|";
+            default: {
+                if (' ' <= chr && chr <= '~') {
+                    return std::to_string(chr);
+                } else {
+                    std::ostringstream oss;
+                    oss << "\\x" << std::hex << chr; // TODO: check for correctness
+                    return oss.str();
+                }
+            }
+        }
     }
 
     AST::Node::Kind AST::DotNode::kind() {

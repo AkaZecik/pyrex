@@ -256,7 +256,7 @@ struct Regex {
                 }
                 case CHAR: {
                     auto c = reinterpret_cast<CharNode *>(node);
-                    return for_char(c->id, c->value);
+                    return for_char(c->id, c->chr);
                 }
                 case DOT: {
                     auto dot = reinterpret_cast<DotNode *>(node);

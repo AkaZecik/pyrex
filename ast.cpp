@@ -7,7 +7,7 @@
 //
 //
 //namespace pyrex {
-//    AST::CharNode::CharNode(char chr) : value(chr) {}
+//    AST::CharNode::CharNode(char chr) : chr(chr) {}
 //
 //    struct AST {
 //        struct Node {
@@ -44,9 +44,9 @@
 //        };
 //
 //        struct CharNode : LeafNode {
-//            char value;
+//            char chr;
 //
-//            explicit CharNode(char value) : value(value) {}
+//            explicit CharNode(char chr) : chr(chr) {}
 //
 //            Kind node_kind() override {
 //                return Kind::CHAR;
