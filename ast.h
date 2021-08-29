@@ -108,7 +108,7 @@ namespace pyrex {
          *****************************/
 
         struct GroupNode : InternalNode {
-            std::shared_ptr<Node> operand;
+            std::shared_ptr<Node> const operand;
 
             explicit GroupNode(std::shared_ptr<Node>);
 
@@ -127,7 +127,7 @@ namespace pyrex {
         struct NamedCGroupNode : GroupNode {
             using GroupNode::GroupNode;
 
-            std::string name;
+            std::string const name;
 
             Kind kind() override;
             std::string to_string() override;
@@ -150,7 +150,7 @@ namespace pyrex {
         };
 
         struct UnaryOperator : Operator {
-            std::shared_ptr<Node> operand;
+            std::shared_ptr<Node> const operand;
 
             explicit UnaryOperator(std::shared_ptr<Node>);
 
@@ -159,7 +159,7 @@ namespace pyrex {
         };
 
         struct BinaryOperator : Operator {
-            std::shared_ptr<Node> left_operand, right_operand;
+            std::shared_ptr<Node> const left_operand, right_operand;
 
             BinaryOperator(std::shared_ptr<Node>, std::shared_ptr<Node>);
 
@@ -196,7 +196,7 @@ namespace pyrex {
         };
 
         struct PowerNode : UnaryOperator {
-            int power;
+            int const power;
 
             PowerNode(std::shared_ptr<Node>, int);
 
@@ -206,7 +206,7 @@ namespace pyrex {
         };
 
         struct MinNode : UnaryOperator {
-            int min;
+            int const min;
 
             MinNode(std::shared_ptr<Node>, int);
 
@@ -216,7 +216,7 @@ namespace pyrex {
         };
 
         struct MaxNode : UnaryOperator {
-            int max;
+            int const max;
 
             MaxNode(std::shared_ptr<Node>, int);
 
@@ -226,8 +226,8 @@ namespace pyrex {
         };
 
         struct RangeNode : UnaryOperator {
-            int min;
-            int max;
+            int const min;
+            int const max;
 
             RangeNode(std::shared_ptr<Node>, int, int);
 
