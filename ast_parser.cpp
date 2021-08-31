@@ -8,7 +8,8 @@
 namespace pyrex {
     AST::Parser::Token::Token(AST::Parser::TokenType type) : type{type} {}
 
-    AST::Parser::Token::Token(AST::Parser::TokenType type, char value) : type{type}, value{value} {}
+    AST::Parser::Token::Token(AST::Parser::TokenType type, char value)
+        : type{type}, value{value} {}
 
     AST::Parser::Parser(const std::string &regex)
         : regex{regex}, curr_pos{0}, concat_insertable{false} {

@@ -63,10 +63,10 @@ namespace pyrex {
                         } else {
                             new_pawn.entered.insert(
                                 old_pawn.entered.cbegin(), old_pawn.entered.cend()
-                                );
+                            );
                             new_pawn.matches.insert(
                                 old_pawn.matches.cbegin(), old_pawn.matches.cend()
-                                );
+                            );
                         }
                     }
                 }
