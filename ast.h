@@ -7,6 +7,7 @@
 
 /* TODO:
  *  - handle duplicate group names
+ *  - make AST::Node operands const
  */
 
 namespace pyrex {
@@ -114,9 +115,9 @@ namespace pyrex {
          *****************************/
 
         struct GroupNode : InternalNode {
-            std::shared_ptr<Node> const operand;
+            std::shared_ptr<Node> operand;
 
-            explicit GroupNode(std::shared_ptr<Node>);
+            explicit GroupNode(std::shared_ptr<Node> node);
 
             int precedence() override;
             InternalNode::Type internal_node_type() override;
@@ -133,7 +134,7 @@ namespace pyrex {
         struct NamedCGroupNode : GroupNode {
             std::string const name;
 
-            NamedCGroupNode(std::shared_ptr<Node>, std::string);
+            NamedCGroupNode(std::shared_ptr<Node> node, std::string name);
 
             Kind kind() override;
             std::string to_string() override;
@@ -156,18 +157,18 @@ namespace pyrex {
         };
 
         struct UnaryOperator : Operator {
-            std::shared_ptr<Node> const operand;
+            std::shared_ptr<Node> operand;
 
-            explicit UnaryOperator(std::shared_ptr<Node>);
+            explicit UnaryOperator(std::shared_ptr<Node> node);
 
             int arity() override;
             std::string to_string() override;
         };
 
         struct BinaryOperator : Operator {
-            std::shared_ptr<Node> const left_operand, right_operand;
+            std::shared_ptr<Node> left_operand, right_operand;
 
-            BinaryOperator(std::shared_ptr<Node>, std::shared_ptr<Node>);
+            BinaryOperator(std::shared_ptr<Node> left_node, std::shared_ptr<Node> right_node);
 
             int arity() override;
             std::string to_string() override;
@@ -204,7 +205,7 @@ namespace pyrex {
         struct PowerNode : UnaryOperator {
             int const power;
 
-            PowerNode(std::shared_ptr<Node>, int);
+            PowerNode(std::shared_ptr<Node>, int power);
 
             Kind kind() override;
             int precedence() override;
@@ -214,7 +215,7 @@ namespace pyrex {
         struct MinNode : UnaryOperator {
             int const min;
 
-            MinNode(std::shared_ptr<Node>, int);
+            MinNode(std::shared_ptr<Node> node, int min);
 
             Kind kind() override;
             int precedence() override;
@@ -224,7 +225,7 @@ namespace pyrex {
         struct MaxNode : UnaryOperator {
             int const max;
 
-            MaxNode(std::shared_ptr<Node>, int);
+            MaxNode(std::shared_ptr<Node> node, int max);
 
             Kind kind() override;
             int precedence() override;
@@ -235,7 +236,7 @@ namespace pyrex {
             int const min;
             int const max;
 
-            RangeNode(std::shared_ptr<Node>, int, int);
+            RangeNode(std::shared_ptr<Node> node, int min, int max);
 
             Kind kind() override;
             int precedence() override;
@@ -273,7 +274,7 @@ namespace pyrex {
     private:
         std::shared_ptr<Node> const root;
 
-        explicit AST(std::shared_ptr<Node>);
+        explicit AST(std::shared_ptr<Node> root);
 
     public:
         AST(AST const &) = default;
@@ -319,11 +320,8 @@ namespace pyrex {
                 DIGIT,
                 DOT,
                 SMALL_D,
-                BIG_D,
                 SMALL_S,
-                BIG_S,
                 SMALL_W,
-                BIG_W,
                 EMPTY,
                 NOTHING,
                 END,
@@ -339,7 +337,7 @@ namespace pyrex {
 
             struct Tokenizer {
                 std::string const &regex;
-                std::size_t curr_pos;
+                std::size_t curr_pos = 0;
 
                 explicit Tokenizer(std::string const &regex);
                 Tokenizer() = delete;
@@ -355,6 +353,8 @@ namespace pyrex {
             std::string const &regex;
             std::vector<Token> tokens;
             std::vector<AST> results;
+            std::vector<std::shared_ptr<AST::InternalNode>> stack;
+            std::size_t curr_pos = 0;
 
             explicit Parser(std::string const &regex);
             Parser() = delete;
@@ -363,12 +363,16 @@ namespace pyrex {
             ~Parser();
 
             AST parse();
-            bool can_insert_concat(Token before, Token after);
+            static inline bool can_insert_concat(Token before, Token after);
             static inline bool before_concat(Token token);
             static inline bool after_concat(Token token);
             void parse_range();
-            void push_node();
-            void interpret_operator(Operator *op);
+            void parse_group();
+            std::string parse_identifier();
+            static bool identifier_start_char(char chr);
+            static bool identifier_char(char chr);
+            void push_node(std::shared_ptr<InternalNode> &&internal_node);
+            void interpret_operator(std::shared_ptr<Operator> &&op);
             void drop_operators_precedence(int precedence);
             void drop_operators_until_group();
         };

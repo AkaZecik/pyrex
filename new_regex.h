@@ -47,13 +47,19 @@ namespace pyrex {
             // minimize, simulate, has nothing, has empty, fullmatch, lmatch, amatch
         };
 
+    private:
+        AST ast;
         std::optional<std::string> regex;
         std::optional<NFA> nfa;
         std::optional<DFA> dfa;
 
+    public:
         Regex(Regex const &);
         Regex(Regex &&);
         Regex(std::string regex);
+
+        void compile();
+        std::string to_string();
 
         static Regex for_nothing();
         static Regex for_empty();
