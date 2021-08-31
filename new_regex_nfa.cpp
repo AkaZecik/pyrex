@@ -16,6 +16,8 @@ namespace pyrex {
                 }
 
                 if (edges_it != edges_for_chr.end() && edges_it->first == firstpos_node) {
+                    // TODO: perhaps add 'bool' argument which specifies what to do in this branch
+                    //  e.g. ignore or merge
                     ++edges_it;
                 } else {
                     GroupToTokens new_tokens(*epsilon_edge);
@@ -85,7 +87,8 @@ namespace pyrex {
             node->connect_to_firstpos(other);
         }
 
-        // TODO: do we want that here?
+        // TODO: do we want that here? what about % operator? won't this cause issues on
+        //  connect_to_firstpos(*other) if both NFAs have epsilon edges?
         if (start_node.epsilon_edge) {
             start_node.connect_to_firstpos(other);
         }
@@ -180,7 +183,7 @@ namespace pyrex {
                 ));
             }
             default:
-                throw std::runtime_error("Unknown node kind");
+                throw std::runtime_error("Unknown AST node kind");
         }
     }
 
@@ -269,14 +272,12 @@ namespace pyrex {
 
     Regex::NFA &Regex::NFA::for_numbered_cgroup() {
         Group *numbered_group = nullptr; // TODO
-        for_group(numbered_group);
-        return *this;
+        return for_group(numbered_group);
     }
 
     Regex::NFA &Regex::NFA::for_named_cgroup() {
         Group *named_group = nullptr; // TODO
-        for_group(named_group);
-        return *this;
+        return for_group(named_group);
     }
 
     Regex::NFA &Regex::NFA::for_group(Group *group) {
@@ -318,19 +319,16 @@ namespace pyrex {
     }
 
     Regex::NFA &Regex::NFA::plus() {
-        concatenate(std::move(NFA(*this).star()));
-        return *this;
+        return concatenate(std::move(NFA(*this).star()));
     }
 
     Regex::NFA &Regex::NFA::power(int n) {
-        range(n, n);
-        return *this;
+        return range(n, n);
     }
 
     Regex::NFA &Regex::NFA::min(int min) {
         if (min == 0) {
-            star();
-            return *this;
+            return star();
         }
 
         std::vector<NFA> copies(min, *this);
@@ -344,8 +342,7 @@ namespace pyrex {
     }
 
     Regex::NFA &Regex::NFA::max(int n) {
-        range(0, n);
-        return *this;
+        return range(0, n);
     }
 
     Regex::NFA &Regex::NFA::range(int min, int max) {
@@ -383,6 +380,7 @@ namespace pyrex {
         connect_to_firstpos(other);
 
         if (other.start_node.epsilon_edge) {
+            // TODO: merge epsilon edges? or should it be done by connect_to_firstpos?
             lastpos.splice(lastpos.cend(), other.lastpos);
         } else {
             for (auto lastpos_node : lastpos) {
@@ -419,11 +417,16 @@ namespace pyrex {
     }
 
     Regex::NFA &Regex::NFA::percent(NFA other) {
-        connect_to_firstpos(other);
-        other.connect_to_firstpos(*this);
-        all_nodes.splice(all_nodes.cend(), other.all_nodes);
-        other.lastpos.clear();
-        other.start_node.clear();
-        return *this;
+        return concatenate(std::move(other.concatenate(*this).star()));
+
+        /* alternative, optimized implementation: */
+
+        // connect_to_firstpos(other); // TODO: fix epsilon edges
+        // other.connect_to_firstpos(*this); // TODO: fix epsilon edges
+        //
+        // all_nodes.splice(all_nodes.cend(), other.all_nodes);
+        // other.lastpos.clear();
+        // other.start_node.clear();
+        // return *this;
     }
 }

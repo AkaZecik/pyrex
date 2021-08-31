@@ -8,11 +8,12 @@
 #include <unordered_map>
 #include "ast.h"
 
-/*
- * TODO:
+/* TODO:
  *  - determine which methods receive Regex, Regex const & and Regex &&.
  *  - similarly for NFA and DFA
  *  - make Regex::NFA::all_nodes std::list<std::shared_ptr<Node>>
+ *  - consider adding information whether there is also a way to match
+ *    without going through a group
  */
 
 namespace pyrex {
@@ -23,6 +24,8 @@ namespace pyrex {
         };
 
         struct NFA {
+            inline static std::size_t const MAX_NUM_OF_NODES = 100000;
+
             enum class GroupToken {
                 ENTER, LEAVE,
             };
@@ -87,6 +90,8 @@ namespace pyrex {
         };
 
         struct DFA {
+            inline static std::size_t const MAX_NUM_OF_NODES = 1000000;
+
             struct Node {
             };
             // minimize, simulate, has nothing, has empty, fullmatch, lmatch, amatch
