@@ -44,7 +44,7 @@ namespace pyrex {
                 UNION,
             };
 
-            virtual Kind kind() = 0;
+            [[nodiscard]] virtual Kind kind() const = 0;
             virtual int precedence() = 0;
             virtual std::string to_string() = 0;
         };
@@ -58,12 +58,12 @@ namespace pyrex {
         };
 
         struct NothingNode : LeafNode {
-            Kind kind() override;
+            [[nodiscard]] Kind kind() const override;
             std::string to_string() override;
         };
 
         struct EmptyNode : LeafNode {
-            Kind kind() override;
+            [[nodiscard]] Kind kind() const override;
             std::string to_string() override;
         };
 
@@ -72,27 +72,27 @@ namespace pyrex {
 
             explicit CharNode(char);
 
-            Kind kind() override;
+            [[nodiscard]] Kind kind() const override;
             std::string to_string() override;
         };
 
         struct DotNode : LeafNode {
-            Kind kind() override;
+            [[nodiscard]] Kind kind() const override;
             std::string to_string() override;
         };
 
         struct SmallDNode : LeafNode {
-            Kind kind() override;
+            [[nodiscard]] Kind kind() const override;
             std::string to_string() override;
         };
 
         struct SmallSNode : LeafNode {
-            Kind kind() override;
+            [[nodiscard]] Kind kind() const override;
             std::string to_string() override;
         };
 
         struct SmallWNode : LeafNode {
-            Kind kind() override;
+            [[nodiscard]] Kind kind() const override;
             std::string to_string() override;
         };
 
@@ -127,7 +127,7 @@ namespace pyrex {
         struct NumberedCGroupNode : GroupNode {
             using GroupNode::GroupNode;
 
-            Kind kind() override;
+            [[nodiscard]] Kind kind() const override;
             std::string to_string() override;
         };
 
@@ -136,14 +136,14 @@ namespace pyrex {
 
             NamedCGroupNode(std::shared_ptr<Node> node, std::string name);
 
-            Kind kind() override;
+            [[nodiscard]] Kind kind() const override;
             std::string to_string() override;
         };
 
         struct NonCGroupNode : GroupNode {
             using GroupNode::GroupNode;
 
-            Kind kind() override;
+            [[nodiscard]] Kind kind() const override;
             std::string to_string() override;
         };
 
@@ -181,7 +181,7 @@ namespace pyrex {
         struct QMarkNode : UnaryOperator {
             using UnaryOperator::UnaryOperator;
 
-            Kind kind() override;
+            [[nodiscard]] Kind kind() const override;
             int precedence() override;
             std::string operator_repr() override;
         };
@@ -189,7 +189,7 @@ namespace pyrex {
         struct StarNode : UnaryOperator {
             using UnaryOperator::UnaryOperator;
 
-            Kind kind() override;
+            [[nodiscard]] Kind kind() const override;
             int precedence() override;
             std::string operator_repr() override;
         };
@@ -197,7 +197,7 @@ namespace pyrex {
         struct PlusNode : UnaryOperator {
             using UnaryOperator::UnaryOperator;
 
-            Kind kind() override;
+            [[nodiscard]] Kind kind() const override;
             int precedence() override;
             std::string operator_repr() override;
         };
@@ -207,7 +207,7 @@ namespace pyrex {
 
             PowerNode(std::shared_ptr<Node>, int power);
 
-            Kind kind() override;
+            [[nodiscard]] Kind kind() const override;
             int precedence() override;
             std::string operator_repr() override;
         };
@@ -217,7 +217,7 @@ namespace pyrex {
 
             MinNode(std::shared_ptr<Node> node, int min);
 
-            Kind kind() override;
+            [[nodiscard]] Kind kind() const override;
             int precedence() override;
             std::string operator_repr() override;
         };
@@ -227,7 +227,7 @@ namespace pyrex {
 
             MaxNode(std::shared_ptr<Node> node, int max);
 
-            Kind kind() override;
+            [[nodiscard]] Kind kind() const override;
             int precedence() override;
             std::string operator_repr() override;
         };
@@ -238,7 +238,7 @@ namespace pyrex {
 
             RangeNode(std::shared_ptr<Node> node, int min, int max);
 
-            Kind kind() override;
+            [[nodiscard]] Kind kind() const override;
             int precedence() override;
             std::string operator_repr() override;
         };
@@ -250,7 +250,7 @@ namespace pyrex {
         struct ConcatNode : BinaryOperator {
             using BinaryOperator::BinaryOperator;
 
-            Kind kind() override;
+            [[nodiscard]] Kind kind() const override;
             int precedence() override;
             std::string operator_repr() override;
         };
@@ -258,7 +258,7 @@ namespace pyrex {
         struct PercentNode : BinaryOperator {
             using BinaryOperator::BinaryOperator;
 
-            Kind kind() override;
+            [[nodiscard]] Kind kind() const override;
             int precedence() override;
             std::string operator_repr() override;
         };
@@ -266,7 +266,7 @@ namespace pyrex {
         struct UnionNode : BinaryOperator {
             using BinaryOperator::BinaryOperator;
 
-            Kind kind() override;
+            [[nodiscard]] Kind kind() const override;
             int precedence() override;
             std::string operator_repr() override;
         };
@@ -280,7 +280,7 @@ namespace pyrex {
         AST(AST const &) = default;
         AST(AST &&) = default;
 
-        Node *get_root();
+        [[nodiscard]] std::shared_ptr<Node> get_root() const;
 
         static AST from_regex(std::string const &regex);
         [[nodiscard]] std::string to_string() const;

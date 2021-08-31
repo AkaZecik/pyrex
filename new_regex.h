@@ -3,31 +3,53 @@
 
 #include <optional>
 #include <set>
+#include <list>
+#include <map>
+#include <unordered_map>
 #include "ast.h"
 
 /*
  * TODO:
  *  - determine which methods receive Regex, Regex const & and Regex &&.
  *  - similarly for NFA and DFA
+ *  - make Regex::NFA::all_nodes std::list<std::shared_ptr<Node>>
  */
 
 namespace pyrex {
     struct Regex {
+    private:
         struct Group {
             std::shared_ptr<AST::Node> const group;
         };
 
         struct NFA {
-            struct Node {
-
+            enum class GroupToken {
+                ENTER, LEAVE,
             };
+
+            typedef std::unordered_map<Group *, std::vector<GroupToken>> GroupToTokens;
+            struct Node;
+            typedef std::unordered_map<char, std::map<Node *, GroupToTokens>> Edges;
+            typedef std::optional<GroupToTokens> EpsilonEdge;
+
+            struct Node {
+                Edges edges;
+                EpsilonEdge epsilon_edge;
+
+                void connect_to_firstpos(NFA const &nfa);
+                void clear();
+            };
+
+            Node start_node;
+            std::list<Node *> all_nodes;
+            std::list<Node *> lastpos;
 
             NFA() = default;
             NFA(NFA const &);
             NFA(NFA &&) = default;
             NFA &operator=(NFA const &) = default;
             NFA &operator=(NFA &&) = default;
-            ~NFA();
+            ~NFA() noexcept;
 
             void connect_to_firstpos(NFA const &other);
 
@@ -36,8 +58,31 @@ namespace pyrex {
             typedef std::optional<Matches> MatchResult;
             MatchResult traverse();
 
-            NFA from_ast(AST const &ast);
-            NFA from_ast_node(AST::Node const &ast_node);
+            static NFA from_ast(AST const &ast);
+            static NFA from_ast_node(std::shared_ptr<AST::Node> const &ast_node);
+
+            static NFA for_nothing();
+            static NFA for_empty();
+            static NFA for_char(char chr);
+            static NFA for_dot();
+            static NFA for_small_d();
+            static NFA for_small_s();
+            static NFA for_small_w();
+
+            NFA &for_non_cgroup();
+            NFA &for_numbered_cgroup();
+            NFA &for_named_cgroup();
+            NFA &for_group(Group *group);
+            NFA &qmark();
+            NFA &star();
+            NFA &plus();
+            NFA &power(int power);
+            NFA &min(int min);
+            NFA &max(int max);
+            NFA &range(int min, int max);
+            NFA &concatenate(NFA other);
+            NFA &union_(NFA other);
+            NFA &percent(NFA other);
             // just traverse, traverse, fullmatch, lmatch, amatch,
         };
 
@@ -47,11 +92,12 @@ namespace pyrex {
             // minimize, simulate, has nothing, has empty, fullmatch, lmatch, amatch
         };
 
-    private:
         AST ast;
         std::optional<std::string> regex;
         std::optional<NFA> nfa;
         std::optional<DFA> dfa;
+        std::optional<std::list<Group>> numbered_groups;
+        std::optional<std::map<std::string, Group>> named_groups;
 
     public:
         Regex(Regex const &);

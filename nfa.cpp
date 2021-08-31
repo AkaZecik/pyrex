@@ -29,7 +29,7 @@ struct Regex {
             typedef std::optional<GroupToTokens> EmptyEdge;
 
             Edges edges;
-            EmptyEdge empty_edge;
+            EmptyEdge epsilon_edge;
             int id; // TODO: can be removed
             char c; // TODO: can be removed
 
@@ -53,7 +53,7 @@ struct Regex {
                         if (edges_it != edges_for_chr.end() && edges_it->first == firstpos_node) {
                             ++edges_it;
                         } else {
-                            GroupToTokens new_tokens(*empty_edge);
+                            GroupToTokens new_tokens(*epsilon_edge);
 
                             for (auto &[group, tokens] : firstpos_tokens) {
                                 auto &new_tokens_for_group = new_tokens[group];
@@ -70,7 +70,7 @@ struct Regex {
 
             void clear() {
                 edges.clear();
-                empty_edge.reset();
+                epsilon_edge.reset();
             }
         };
 
@@ -88,13 +88,13 @@ struct Regex {
                 new_nodes[orig_node] = new_node;
                 all_nodes.push_back(new_node);
 
-                if (orig_node->empty_edge) {
+                if (orig_node->epsilon_edge) {
                     lastpos.push_back(new_node);
                 }
             }
 
             for (auto[orig_node, new_node] : new_nodes) {
-                new_node->empty_edge = orig_node->empty_edge;
+                new_node->epsilon_edge = orig_node->epsilon_edge;
 
                 for (auto &[c, orig_node_edges_for_c] : orig_node->edges) {
                     auto &new_node_edges_for_c = new_node->edges[c];
@@ -105,7 +105,7 @@ struct Regex {
                 }
             }
 
-            start_node.empty_edge = other.start_node.empty_edge;
+            start_node.epsilon_edge = other.start_node.epsilon_edge;
 
             for (auto &[c, orig_start_node_edges_for_c] : other.start_node.edges) {
                 auto &start_node_edges_for_c = start_node.edges[c];
@@ -135,7 +135,7 @@ struct Regex {
             }
 
             // TODO: do we want that here?
-            if (start_node.empty_edge) {
+            if (start_node.epsilon_edge) {
                 start_node.connect_to_firstpos(other);
             }
         }
@@ -151,7 +151,7 @@ struct Regex {
             auto text_end = text.cend();
 
             if (text_it == text_end) {
-                if (start_node.empty_edge) {
+                if (start_node.epsilon_edge) {
                     return {{{0, 0}}};
                 } else {
                     return {};
@@ -222,7 +222,7 @@ struct Regex {
                     Matches result;
 
                     for (auto &[node, pawn] : new_pawns) {
-                        if (node->empty_edge) {
+                        if (node->epsilon_edge) {
                             matched = true;
 
                             for (auto begin : pawn.entered) {
@@ -339,14 +339,14 @@ struct Regex {
 
         static NFA for_empty() {
             NFA nfa;
-            nfa.start_node.empty_edge.emplace();
+            nfa.start_node.epsilon_edge.emplace();
             return nfa;
         }
 
         static NFA for_char(int id, char c) {
             NFA nfa;
             auto node = new Node(id, c);
-            node->empty_edge.emplace();
+            node->epsilon_edge.emplace();
             nfa.all_nodes.push_back(node);
             nfa.lastpos.push_back(node);
             nfa.start_node.edges[c].insert({node, {}});
@@ -356,7 +356,7 @@ struct Regex {
         static NFA for_dot(int id) {
             NFA nfa;
             auto node = new Node(id);
-            node->empty_edge.emplace();
+            node->epsilon_edge.emplace();
             nfa.all_nodes.push_back(node);
             nfa.lastpos.push_back(node);
 
@@ -371,7 +371,7 @@ struct Regex {
         static NFA for_small_d(int id) {
             NFA nfa;
             auto node = new Node(id);
-            node->empty_edge.emplace();
+            node->epsilon_edge.emplace();
             nfa.all_nodes.push_back(node);
             nfa.lastpos.push_back(node);
 
@@ -385,7 +385,7 @@ struct Regex {
         static NFA for_small_s(int id) {
             NFA nfa;
             auto node = new Node(id);
-            node->empty_edge.emplace();
+            node->epsilon_edge.emplace();
             nfa.all_nodes.push_back(node);
             nfa.lastpos.push_back(node);
 
@@ -399,7 +399,7 @@ struct Regex {
         static NFA for_small_w(int id) {
             NFA nfa;
             auto node = new Node(id);
-            node->empty_edge.emplace();
+            node->epsilon_edge.emplace();
             nfa.all_nodes.push_back(node);
             nfa.lastpos.push_back(node);
 
@@ -429,8 +429,8 @@ struct Regex {
         }
 
         NFA &for_group(Group *group) {
-            if (start_node.empty_edge) {
-                auto &tokens = (*start_node.empty_edge)[group];
+            if (start_node.epsilon_edge) {
+                auto &tokens = (*start_node.epsilon_edge)[group];
                 tokens.push_back(GroupToken::ENTER);
                 tokens.push_back(GroupToken::LEAVE);
             }
@@ -442,15 +442,15 @@ struct Regex {
             }
 
             for (auto lastpos_node : lastpos) {
-                (*lastpos_node->empty_edge)[group].push_back(GroupToken::LEAVE);
+                (*lastpos_node->epsilon_edge)[group].push_back(GroupToken::LEAVE);
             }
 
             return *this;
         }
 
         NFA &qmark() {
-            if (!start_node.empty_edge) {
-                start_node.empty_edge.emplace();
+            if (!start_node.epsilon_edge) {
+                start_node.epsilon_edge.emplace();
             }
 
             return *this;
@@ -459,11 +459,11 @@ struct Regex {
         NFA &concatenate(NFA other) {
             connect_to_firstpos(other);
 
-            if (other.start_node.empty_edge) {
+            if (other.start_node.epsilon_edge) {
                 lastpos.splice(lastpos.cend(), other.lastpos);
             } else {
                 for (auto lastpos_node : lastpos) {
-                    lastpos_node->empty_edge.reset();
+                    lastpos_node->epsilon_edge.reset();
                 }
 
                 lastpos.clear();
@@ -480,26 +480,26 @@ struct Regex {
                 start_node.edges[c].merge(other_start_edges_for_c);
             }
 
-            if (other.start_node.empty_edge) {
-                if (start_node.empty_edge) {
-                    start_node.empty_edge->merge(*other.start_node.empty_edge);
+            if (other.start_node.epsilon_edge) {
+                if (start_node.epsilon_edge) {
+                    start_node.epsilon_edge->merge(*other.start_node.epsilon_edge);
                 } else {
-                    start_node.empty_edge = *other.start_node.empty_edge;
+                    start_node.epsilon_edge = *other.start_node.epsilon_edge;
                 }
             }
 
             all_nodes.splice(all_nodes.cend(), other.all_nodes);
             lastpos.splice(lastpos.cend(), other.lastpos);
             other.start_node.edges.clear();
-            other.start_node.empty_edge.reset();
+            other.start_node.epsilon_edge.reset();
             return *this;
         }
 
         NFA &star() {
             connect_to_firstpos(*this);
 
-            if (!start_node.empty_edge) {
-                start_node.empty_edge.emplace();
+            if (!start_node.epsilon_edge) {
+                start_node.epsilon_edge.emplace();
             }
 
             return *this;
@@ -522,8 +522,8 @@ struct Regex {
             }
 
             if (min == 0) {
-                if (!start_node.empty_edge) {
-                    start_node.empty_edge.emplace();
+                if (!start_node.epsilon_edge) {
+                    start_node.epsilon_edge.emplace();
                 }
             }
 
@@ -533,9 +533,9 @@ struct Regex {
 
             std::vector<NFA> copies(max - 1, *this);
 
-            if (!start_node.empty_edge) {
+            if (!start_node.epsilon_edge) {
                 for (int i = min - 1; i < max - 1; ++i) {
-                    copies[i].start_node.empty_edge.emplace();
+                    copies[i].start_node.epsilon_edge.emplace();
                 }
             }
 

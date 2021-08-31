@@ -18,7 +18,7 @@ namespace pyrex {
         return 0;
     }
 
-    AST::Node::Kind AST::NothingNode::kind() {
+    AST::Node::Kind AST::NothingNode::kind() const {
         return AST::Node::Kind::NOTHING;
     }
 
@@ -26,7 +26,7 @@ namespace pyrex {
         return "\\#";
     }
 
-    AST::Node::Kind AST::EmptyNode::kind() {
+    AST::Node::Kind AST::EmptyNode::kind() const {
         return AST::Node::Kind::EMPTY;
     }
 
@@ -36,7 +36,7 @@ namespace pyrex {
 
     AST::CharNode::CharNode(char chr) : chr{chr} {}
 
-    AST::Node::Kind AST::CharNode::kind() {
+    AST::Node::Kind AST::CharNode::kind() const {
         return Node::Kind::CHAR;
     }
 
@@ -84,7 +84,7 @@ namespace pyrex {
         }
     }
 
-    AST::Node::Kind AST::DotNode::kind() {
+    AST::Node::Kind AST::DotNode::kind() const {
         return AST::Node::Kind::DOT;
     }
 
@@ -92,7 +92,7 @@ namespace pyrex {
         return ".";
     }
 
-    AST::Node::Kind AST::SmallDNode::kind() {
+    AST::Node::Kind AST::SmallDNode::kind() const {
         return Node::Kind::SMALL_D;
     }
 
@@ -100,7 +100,7 @@ namespace pyrex {
         return "\\d";
     }
 
-    AST::Node::Kind AST::SmallSNode::kind() {
+    AST::Node::Kind AST::SmallSNode::kind() const {
         return Node::Kind::SMALL_S;
     }
 
@@ -108,7 +108,7 @@ namespace pyrex {
         return "\\s";
     }
 
-    AST::Node::Kind AST::SmallWNode::kind() {
+    AST::Node::Kind AST::SmallWNode::kind() const {
         return Node::Kind::SMALL_W;
     }
 
@@ -134,7 +134,7 @@ namespace pyrex {
         return 1;
     }
 
-    AST::Node::Kind AST::NumberedCGroupNode::kind() {
+    AST::Node::Kind AST::NumberedCGroupNode::kind() const {
         return Node::Kind::NUMBERED_CGROUP;
     }
 
@@ -145,7 +145,7 @@ namespace pyrex {
     AST::NamedCGroupNode::NamedCGroupNode(std::shared_ptr<Node> node, std::string name)
         : GroupNode{std::move(node)}, name{std::move(name)} {}
 
-    AST::Node::Kind AST::NamedCGroupNode::kind() {
+    AST::Node::Kind AST::NamedCGroupNode::kind() const {
         return Node::Kind::NAMED_CGROUP;
     }
 
@@ -154,7 +154,7 @@ namespace pyrex {
             .append(")");
     }
 
-    AST::Node::Kind AST::NonCGroupNode::kind() {
+    AST::Node::Kind AST::NonCGroupNode::kind() const {
         return Node::Kind::NON_CGROUP;
     }
 
@@ -215,7 +215,7 @@ namespace pyrex {
      *        Unary operators        *
      *********************************/
 
-    AST::Node::Kind AST::QMarkNode::kind() {
+    AST::Node::Kind AST::QMarkNode::kind() const {
         return Node::Kind::QMARK;
     }
 
@@ -227,7 +227,7 @@ namespace pyrex {
         return "?";
     }
 
-    AST::Node::Kind AST::StarNode::kind() {
+    AST::Node::Kind AST::StarNode::kind() const {
         return Node::Kind::STAR;
     }
 
@@ -239,7 +239,7 @@ namespace pyrex {
         return "*";
     }
 
-    AST::Node::Kind AST::PlusNode::kind() {
+    AST::Node::Kind AST::PlusNode::kind() const {
         return Node::Kind::PLUS;
     }
 
@@ -254,7 +254,7 @@ namespace pyrex {
     AST::PowerNode::PowerNode(std::shared_ptr<Node> node, int power)
         : UnaryOperator{std::move(node)}, power{power} {}
 
-    AST::Node::Kind AST::PowerNode::kind() {
+    AST::Node::Kind AST::PowerNode::kind() const {
         return Node::Kind::POWER;
     }
 
@@ -269,7 +269,7 @@ namespace pyrex {
     AST::MinNode::MinNode(std::shared_ptr<Node> node, int min)
         : UnaryOperator{std::move(node)}, min{min} {}
 
-    AST::Node::Kind AST::MinNode::kind() {
+    AST::Node::Kind AST::MinNode::kind() const {
         return Node::Kind::MIN;
     }
 
@@ -284,7 +284,7 @@ namespace pyrex {
     AST::MaxNode::MaxNode(std::shared_ptr<Node> node, int max)
         : UnaryOperator{std::move(node)}, max{max} {}
 
-    AST::Node::Kind AST::MaxNode::kind() {
+    AST::Node::Kind AST::MaxNode::kind() const {
         return Node::Kind::MAX;
     }
 
@@ -299,7 +299,7 @@ namespace pyrex {
     AST::RangeNode::RangeNode(std::shared_ptr<Node> node, int min, int max)
         : UnaryOperator{std::move(node)}, min{min}, max{max} {}
 
-    AST::Node::Kind AST::RangeNode::kind() {
+    AST::Node::Kind AST::RangeNode::kind() const {
         return Node::Kind::RANGE;
     }
 
@@ -316,7 +316,7 @@ namespace pyrex {
      *        Binary operators        *
      **********************************/
 
-    AST::Node::Kind AST::ConcatNode::kind() {
+    AST::Node::Kind AST::ConcatNode::kind() const {
         return Node::Kind::CONCAT;
     }
 
@@ -328,7 +328,7 @@ namespace pyrex {
         return "";
     }
 
-    AST::Node::Kind AST::PercentNode::kind() {
+    AST::Node::Kind AST::PercentNode::kind() const {
         return Node::Kind::PERCENT;
     }
 
@@ -340,7 +340,7 @@ namespace pyrex {
         return "%";
     }
 
-    AST::Node::Kind AST::UnionNode::kind() {
+    AST::Node::Kind AST::UnionNode::kind() const {
         return Node::Kind::UNION;
     }
 
