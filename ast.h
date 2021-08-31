@@ -337,7 +337,7 @@ namespace pyrex {
 
             struct Tokenizer {
                 std::string const &regex;
-                std::size_t curr_pos = 0;
+                std::size_t curr_pos;
 
                 explicit Tokenizer(std::string const &regex);
                 Tokenizer() = delete;
@@ -347,20 +347,19 @@ namespace pyrex {
                 std::vector<Token> get_all_tokens();
                 Token get_token();
                 Token parse_escape();
-                Token parse_hex();
+                char parse_hex();
             };
 
             std::string const &regex;
-            std::vector<Token> tokens;
+            std::vector<Token> all_tokens;
             std::vector<AST> results;
             std::vector<std::shared_ptr<AST::InternalNode>> stack;
-            std::size_t curr_pos = 0;
+            std::size_t curr_pos;
 
             explicit Parser(std::string const &regex);
             Parser() = delete;
             Parser(Parser const &) = delete;
             Parser(Parser &&) = delete;
-            ~Parser();
 
             AST parse();
             static inline bool can_insert_concat(Token before, Token after);

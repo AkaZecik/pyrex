@@ -2,6 +2,7 @@
 
 /* TODO:
  *  - std::stoi might raise
+ *  - create custom error classes
  */
 
 namespace pyrex {
@@ -9,24 +10,24 @@ namespace pyrex {
 
     AST::Parser::Token::Token(AST::Parser::TokenType type, char value) : type{type}, value{value} {}
 
-    AST::Parser::Parser(const std::string &regex) : regex{regex} {
+    AST::Parser::Parser(const std::string &regex) : regex{regex}, curr_pos{0} {
         Tokenizer tokenizer(regex);
-        tokens = tokenizer.get_all_tokens();
+        all_tokens = tokenizer.get_all_tokens();
     }
 
     AST AST::Parser::parse() {
         while (true) {
-            if (curr_pos > 0 && can_insert_concat(tokens[curr_pos - 1], tokens[curr_pos])) {
+            if (curr_pos > 0 && can_insert_concat(all_tokens[curr_pos - 1], all_tokens[curr_pos])) {
                 interpret_operator(std::make_shared<ConcatNode>(nullptr, nullptr));
             }
 
-            Token token = tokens[curr_pos];
+            Token token = all_tokens[curr_pos];
             curr_pos += 1;
 
             if (token.type == TokenType::LPAREN) {
                 parse_group();
 
-                if (tokens[curr_pos].type == TokenType::RPAREN) {
+                if (all_tokens[curr_pos].type == TokenType::RPAREN) {
                     throw std::runtime_error("Empty group");
                 }
             } else if (token.type == TokenType::RPAREN) {
@@ -73,7 +74,7 @@ namespace pyrex {
                 }
 
                 if (results.size() > 1) {
-                    throw std::runtime_error("Not enough operators");  // TODO: improve
+                    throw std::runtime_error("Not enough operators");
                 }
 
                 auto result = results.back();
@@ -122,25 +123,25 @@ namespace pyrex {
     }
 
     void AST::Parser::parse_group() {
-        if (tokens[curr_pos].type == TokenType::CHAR && tokens[curr_pos].value == '?') {
+        if (all_tokens[curr_pos].type == TokenType::CHAR && all_tokens[curr_pos].value == '?') {
             curr_pos += 1;
 
-            if (tokens[curr_pos].type == TokenType::END) {
+            if (all_tokens[curr_pos].type == TokenType::END) {
                 throw std::runtime_error("Premature end of input");
             } else {
-                if (tokens[curr_pos].type == TokenType::CHAR) {
-                    if (tokens[curr_pos].value == ':') {
+                if (all_tokens[curr_pos].type == TokenType::CHAR) {
+                    if (all_tokens[curr_pos].value == ':') {
                         curr_pos += 1;
                         stack.push_back(std::make_shared<NonCGroupNode>(nullptr));
                         return;
-                    } else if (tokens[curr_pos].value == '<') {
+                    } else if (all_tokens[curr_pos].value == '<') {
                         curr_pos += 1;
                         auto name = parse_identifier();
 
-                        if (tokens[curr_pos].type == TokenType::END) {
+                        if (all_tokens[curr_pos].type == TokenType::END) {
                             throw std::runtime_error("Premature end of input");
-                        } else if (tokens[curr_pos].type != TokenType::CHAR ||
-                                   tokens[curr_pos].value != '>') {
+                        } else if (all_tokens[curr_pos].type != TokenType::CHAR ||
+                                   all_tokens[curr_pos].value != '>') {
                             throw std::runtime_error("Unterminated name of named group");
                         } else {
                             curr_pos += 1;
@@ -161,14 +162,14 @@ namespace pyrex {
     std::string AST::Parser::parse_identifier() {
         std::string identifier;
 
-        if (tokens[curr_pos].type == TokenType::CHAR &&
-            identifier_start_char(tokens[curr_pos].value)) {
-            identifier.push_back(tokens[curr_pos].value);
+        if (all_tokens[curr_pos].type == TokenType::CHAR &&
+            identifier_start_char(all_tokens[curr_pos].value)) {
+            identifier.push_back(all_tokens[curr_pos].value);
             curr_pos += 1;
 
-            while (tokens[curr_pos].type == TokenType::CHAR &&
-                   identifier_char(tokens[curr_pos].value)) {
-                identifier.push_back(tokens[curr_pos].value);
+            while (all_tokens[curr_pos].type == TokenType::CHAR &&
+                   identifier_char(all_tokens[curr_pos].value)) {
+                identifier.push_back(all_tokens[curr_pos].value);
                 curr_pos += 1;
             }
 
@@ -189,20 +190,20 @@ namespace pyrex {
     void AST::Parser::parse_range() {
         std::string num1, num2;
 
-        while (tokens[curr_pos].type == TokenType::DIGIT) {
-            num1.push_back(tokens[curr_pos].value);
+        while (all_tokens[curr_pos].type == TokenType::DIGIT) {
+            num1.push_back(all_tokens[curr_pos].value);
             curr_pos += 1;
         }
 
-        if (tokens[curr_pos].type == TokenType::CHAR && tokens[curr_pos].value == ',') {
+        if (all_tokens[curr_pos].type == TokenType::CHAR && all_tokens[curr_pos].value == ',') {
             curr_pos += 1;
 
-            while (tokens[curr_pos].type == TokenType::DIGIT) {
-                num2.push_back(tokens[curr_pos].value);
+            while (all_tokens[curr_pos].type == TokenType::DIGIT) {
+                num2.push_back(all_tokens[curr_pos].value);
                 curr_pos += 1;
             }
 
-            if (tokens[curr_pos].type != TokenType::RCURLY) {
+            if (all_tokens[curr_pos].type != TokenType::RCURLY) {
                 throw std::runtime_error("Unclosed range operator");
             }
 
@@ -227,7 +228,7 @@ namespace pyrex {
         } else {
             if (num1.empty()) {
                 throw std::runtime_error("Incorrect range operator");
-            } else if (tokens[curr_pos].type != TokenType::RCURLY) {
+            } else if (all_tokens[curr_pos].type != TokenType::RCURLY) {
                 throw std::runtime_error("Unclosed range operator");
             }
 
