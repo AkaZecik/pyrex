@@ -8,7 +8,6 @@ int main() {
     while (true) {
         std::string regex;
         std::getline(std::cin, regex);
-//        std::cout << "len(\"" << regex << "\") == " << regex.size() << std::endl;
 
         try {
             pyrex::AST ast = pyrex::AST::from_regex(regex);
