@@ -39,6 +39,8 @@ namespace pyrex {
                 return Token(TokenType::PLUS);
             case '|':
                 return Token(TokenType::UNION);
+            case '%':
+                return Token(TokenType::PERCENT);
             case '?':
                 return Token(TokenType::QMARK);
             case '.':
@@ -87,6 +89,8 @@ namespace pyrex {
                 return {TokenType::CHAR, '+'};
             case '|':
                 return {TokenType::CHAR, '|'};
+            case '%':
+                return {TokenType::PERCENT, '%'};
             case '?':
                 return {TokenType::CHAR, '?'};
             case '{':

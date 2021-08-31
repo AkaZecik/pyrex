@@ -8,3 +8,5 @@ add_executable(main_parser main_parser.cpp)
 add_executable(main_nfa main_nfa.cpp)
 add_executable(main_dfa main_dfa.cpp)
 add_executable(regex regex.cpp regex.h)
+
+add_executable(ast_main ast_main.cpp ast.h ast_ast.cpp ast_node.cpp ast_parser.cpp ast_tokenizer.cpp)

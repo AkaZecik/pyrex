@@ -9,6 +9,10 @@ namespace pyrex {
         return root.get();
     }
 
+    std::string AST::to_string() const {
+        return root->to_string();
+    }
+
     AST AST::from_regex(const std::string &regex) {
         Parser parser(regex);
         return parser.parse();

@@ -74,7 +74,7 @@ namespace pyrex {
                 return "\\|";
             default: {
                 if (' ' <= chr && chr <= '~') {
-                    return std::to_string(chr);
+                    return {chr};
                 } else {
                     std::ostringstream oss;
                     oss << "\\x" << std::hex << chr;
@@ -142,6 +142,9 @@ namespace pyrex {
         return std::string("(").append(operand->to_string()).append(")");
     }
 
+    AST::NamedCGroupNode::NamedCGroupNode(std::shared_ptr<Node> node, std::string name)
+        : GroupNode{std::move(node)}, name{std::move(name)} {}
+
     AST::Node::Kind AST::NamedCGroupNode::kind() {
         return Node::Kind::NAMED_CGROUP;
     }
@@ -174,7 +177,7 @@ namespace pyrex {
     }
 
     std::string AST::UnaryOperator::to_string() {
-        if (operand->precedence() < precedence()) {
+        if (operand->precedence() > precedence()) {
             return std::string("(?:").append(operand->to_string()).append(")")
                 .append(operator_repr());
         } else {
@@ -193,13 +196,13 @@ namespace pyrex {
     std::string AST::BinaryOperator::to_string() {
         std::string left, right;
 
-        if (left_operand->precedence() < precedence()) {
+        if (left_operand->precedence() > precedence()) {
             left = std::string("(?:").append(left_operand->to_string()).append(")");
         } else {
             left = left_operand->to_string();
         }
 
-        if (right_operand->precedence() < precedence()) {
+        if (right_operand->precedence() > precedence()) {
             right = std::string("(?:").append(right_operand->to_string()).append(")");
         } else {
             right = right_operand->to_string();

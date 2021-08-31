@@ -10,14 +10,15 @@ namespace pyrex {
 
     AST::Parser::Token::Token(AST::Parser::TokenType type, char value) : type{type}, value{value} {}
 
-    AST::Parser::Parser(const std::string &regex) : regex{regex}, curr_pos{0} {
+    AST::Parser::Parser(const std::string &regex)
+        : regex{regex}, curr_pos{0}, concat_insertable{false} {
         Tokenizer tokenizer(regex);
         all_tokens = tokenizer.get_all_tokens();
     }
 
     AST AST::Parser::parse() {
         while (true) {
-            if (curr_pos > 0 && can_insert_concat(all_tokens[curr_pos - 1], all_tokens[curr_pos])) {
+            if (can_insert_concat()) {
                 interpret_operator(std::make_shared<ConcatNode>(nullptr, nullptr));
             }
 
@@ -29,6 +30,8 @@ namespace pyrex {
 
                 if (all_tokens[curr_pos].type == TokenType::RPAREN) {
                     throw std::runtime_error("Empty group");
+                } else if (all_tokens[curr_pos].type == TokenType::END) {
+                    throw std::runtime_error("Premature end of input");
                 }
             } else if (token.type == TokenType::RPAREN) {
                 drop_operators_until_group();
@@ -52,6 +55,8 @@ namespace pyrex {
                 interpret_operator(std::make_shared<QMarkNode>(nullptr));
             } else if (token.type == TokenType::UNION) {
                 interpret_operator(std::make_shared<UnionNode>(nullptr, nullptr));
+            } else if (token.type == TokenType::PERCENT) {
+                interpret_operator(std::make_shared<PercentNode>(nullptr, nullptr));
             } else if (token.type == TokenType::CHAR || token.type == TokenType::DIGIT) {
                 results.push_back(AST::for_char(token.value));
             } else if (token.type == TokenType::DOT) {
@@ -83,29 +88,19 @@ namespace pyrex {
             } else {
                 throw std::runtime_error("Unknown token type");
             }
+
+            if (token.type == TokenType::LPAREN ||
+                token.type == TokenType::UNION ||
+                token.type == TokenType::PERCENT) {
+                concat_insertable = false;
+            } else {
+                concat_insertable = true;
+            }
         }
     }
 
-    bool AST::Parser::can_insert_concat(Token before, Token after) {
-        return before_concat(before) && after_concat(after);
-    }
-
-    bool AST::Parser::before_concat(Token token) {
-        return (
-            token.type == TokenType::RPAREN ||
-            token.type == TokenType::RCURLY ||
-            token.type == TokenType::STAR ||
-            token.type == TokenType::PLUS ||
-            token.type == TokenType::QMARK ||
-            token.type == TokenType::CHAR ||
-            token.type == TokenType::DIGIT ||
-            token.type == TokenType::DOT ||
-            token.type == TokenType::EMPTY ||
-            token.type == TokenType::NOTHING ||
-            token.type == TokenType::SMALL_D ||
-            token.type == TokenType::SMALL_S ||
-            token.type == TokenType::SMALL_W
-        );
+    bool AST::Parser::can_insert_concat() {
+        return concat_insertable && after_concat(all_tokens[curr_pos]);
     }
 
     bool AST::Parser::after_concat(Token token) {
@@ -123,7 +118,7 @@ namespace pyrex {
     }
 
     void AST::Parser::parse_group() {
-        if (all_tokens[curr_pos].type == TokenType::CHAR && all_tokens[curr_pos].value == '?') {
+        if (all_tokens[curr_pos].type == TokenType::QMARK) {
             curr_pos += 1;
 
             if (all_tokens[curr_pos].type == TokenType::END) {
@@ -239,12 +234,13 @@ namespace pyrex {
 
     void AST::Parser::push_node(std::shared_ptr<InternalNode> &&internal_node) {
         if (internal_node->arity() > results.size()) {
-            throw std::runtime_error("Too little operand");
+            throw std::runtime_error("Too little operands");
         }
 
         if (internal_node->internal_node_type() == AST::InternalNode::Type::GROUP) {
             auto group = std::dynamic_pointer_cast<GroupNode>(internal_node);
             auto ast = results.back();
+            results.pop_back();
             group->operand = ast.root;
             results.push_back(AST(group));
         } else {

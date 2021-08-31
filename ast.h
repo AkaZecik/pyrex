@@ -283,6 +283,7 @@ namespace pyrex {
         Node *get_root();
 
         static AST from_regex(std::string const &regex);
+        [[nodiscard]] std::string to_string() const;
 
         static AST for_nothing();
         static AST for_empty();
@@ -315,6 +316,7 @@ namespace pyrex {
                 STAR,
                 PLUS,
                 UNION,
+                PERCENT,
                 QMARK,
                 CHAR,
                 DIGIT,
@@ -355,6 +357,7 @@ namespace pyrex {
             std::vector<AST> results;
             std::vector<std::shared_ptr<AST::InternalNode>> stack;
             std::size_t curr_pos;
+            bool concat_insertable;
 
             explicit Parser(std::string const &regex);
             Parser() = delete;
@@ -362,8 +365,7 @@ namespace pyrex {
             Parser(Parser &&) = delete;
 
             AST parse();
-            static inline bool can_insert_concat(Token before, Token after);
-            static inline bool before_concat(Token token);
+            inline bool can_insert_concat();
             static inline bool after_concat(Token token);
             void parse_range();
             void parse_group();
