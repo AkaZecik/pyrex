@@ -18,6 +18,10 @@
 
 namespace pyrex {
     struct Regex {
+        enum class MatchType {
+            LMATCH, RMATCH, FMATCH, AMATCH,
+        };
+
     private:
         struct Group {
             std::shared_ptr<AST::Node> const group;
@@ -30,7 +34,7 @@ namespace pyrex {
                 ENTER, LEAVE,
             };
 
-            typedef std::unordered_map<Group *, std::vector<GroupToken>> GroupToTokens;
+            typedef std::unordered_map<Group *, std::list<GroupToken>> GroupToTokens;
             struct Node;
             typedef std::unordered_map<char, std::list<Node *>> Edges;
 
@@ -62,7 +66,11 @@ namespace pyrex {
             MatchResult traverse(std::string const &text, Group *group);
 
             static NFA from_ast(AST const &ast);
-            static NFA from_ast_node(std::shared_ptr<AST::Node> const &ast_node);
+            static NFA from_ast_node(
+                std::shared_ptr<AST::Node> const &ast_node,
+                std::list<Group> &numbered_groups,
+                std::map<std::string, Group> &named_groups
+            );
 
             static NFA for_nothing();
             static NFA for_empty();
@@ -101,6 +109,7 @@ namespace pyrex {
         std::optional<std::string> regex;
         std::optional<NFA> nfa;
         std::optional<DFA> dfa;
+        // we would like to build groups without building nfa first:
         std::optional<std::list<Group>> numbered_groups;
         std::optional<std::map<std::string, Group>> named_groups;
 

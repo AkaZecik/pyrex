@@ -317,20 +317,20 @@ namespace pyrex {
     Regex::NFA &Regex::NFA::star() {
         for (auto lastpos_node : lastpos) {
             for (auto const &[chr, firstpos_nodes] : start_node.edges) {
-                auto &lastpos_edges = lastpos_node->edges[chr];
-                auto lastpos_edge_it = lastpos_edges.cbegin();
+                auto &lastpos_edges_for_chr = lastpos_node->edges[chr];
+                auto lastpos_edge_it = lastpos_edges_for_chr.cbegin();
 
                 for (auto firstpos_node : firstpos_nodes) {
-                    while (lastpos_edge_it != lastpos_edges.cend() &&
+                    while (lastpos_edge_it != lastpos_edges_for_chr.cend() &&
                            *lastpos_edge_it < firstpos_node) {
                         ++lastpos_edge_it;
                     }
 
-                    if (lastpos_edge_it != lastpos_edges.cend() &&
+                    if (lastpos_edge_it != lastpos_edges_for_chr.cend() &&
                         *lastpos_edge_it == firstpos_node) {
                         ++lastpos_edge_it;
                     } else {
-                        lastpos_edges.emplace_hint(lastpos_edge_it, lastpos_node);
+                        lastpos_edges_for_chr.emplace_hint(lastpos_edge_it, lastpos_node);
                         auto &firstpos_groups = start_node.node_to_groups[firstpos_node];
                         auto[new_tokens_it, _] = lastpos_node->node_to_groups
                             .emplace(firstpos_node, *lastpos_node->epsilon_edge);
@@ -345,13 +345,7 @@ namespace pyrex {
             start_node.epsilon_edge.emplace();
         }
 
-        // connect_to_firstpos(*this);
-        //
-        // if (!start_node.epsilon_edge) {
-        //     start_node.epsilon_edge.emplace();
-        // }
-        //
-        // return *this;
+        return *this;
     }
 
     Regex::NFA &Regex::NFA::plus() {
@@ -413,23 +407,48 @@ namespace pyrex {
     }
 
     Regex::NFA &Regex::NFA::concatenate(NFA other) {
-        connect_to_firstpos(other);
-
-        if (other.start_node.epsilon_edge) {
-            // TODO: merge epsilon edges? or should it be done by connect_to_firstpos?
-            lastpos.splice(lastpos.cend(), other.lastpos);
-        } else {
-            for (auto lastpos_node : lastpos) {
-                lastpos_node->epsilon_edge.reset();
+        auto connect_to_other = [&other](NFA::Node *node) {
+            for (auto const &[chr, firstpos_nodes] : other.start_node.edges) {
+                node->edges[chr].insert(firstpos_nodes.cbegin(), firstpos_nodes.cend());
             }
 
+            for (auto &[firstpos_node, other_groups] : other.start_node.node_to_groups) {
+                auto[groups_it, _] = node->node_to_groups
+                    .emplace(firstpos_node, *node->epsilon_edge);
+
+                for (auto &[group, other_tokens] : other_groups) {
+                    auto &tokens = groups_it->second[group];
+                    tokens.insert(tokens.cend(), other_tokens.cbegin(), other_tokens.cend());
+                }
+            }
+
+            if (other.start_node.epsilon_edge) {
+                for (auto &[group, other_tokens] : *other.start_node.epsilon_edge) {
+                    auto &tokens = (*node->epsilon_edge)[group];
+                    tokens.insert(tokens.cend(), other_tokens.cbegin(), other_tokens.cend());
+                }
+            } else {
+                node->epsilon_edge.reset();
+            }
+        };
+
+        for (auto lastpos_node : lastpos) {
+            connect_to_other(lastpos_node);
+        }
+
+        if (start_node.epsilon_edge) {
+            connect_to_other(&start_node);
+        }
+
+        if (other.start_node.epsilon_edge) {
+            lastpos.splice(lastpos.cend(), other.lastpos);
+        } else {
             lastpos.clear();
             std::swap(lastpos, other.lastpos);
         }
 
         all_nodes.splice(all_nodes.cend(), other.all_nodes);
         other.start_node.clear();
-        return *this;
     }
 
     Regex::NFA &Regex::NFA::union_(NFA other) {
