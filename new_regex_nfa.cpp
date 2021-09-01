@@ -309,13 +309,42 @@ namespace pyrex {
     }
 
     Regex::NFA &Regex::NFA::star() {
-        connect_to_firstpos(*this);
+        for (auto lastpos_node : lastpos) {
+            for (auto const &[chr, firstpos_nodes] : start_node.edges) {
+                auto &lastpos_edges = lastpos_node->edges[chr];
+                auto lastpos_edge_it = lastpos_edges.cbegin();
+
+                for (auto firstpos_node : firstpos_nodes) {
+                    while (lastpos_edge_it != lastpos_edges.cend() &&
+                           *lastpos_edge_it < firstpos_node) {
+                        ++lastpos_edge_it;
+                    }
+
+                    if (lastpos_edge_it != lastpos_edges.cend() &&
+                        *lastpos_edge_it == firstpos_node) {
+                        ++lastpos_edge_it;
+                    } else {
+                        auto &firstpos_groups = start_node.groups[firstpos_node];
+                        auto[new_tokens_it, _] = lastpos_node->groups
+                            .emplace(firstpos_node, *lastpos_node->epsilon_edge);
+                        new_tokens_it->second.insert(firstpos_groups.cbegin(),
+                                                     firstpos_groups.cend());
+                    }
+                }
+            }
+        }
 
         if (!start_node.epsilon_edge) {
             start_node.epsilon_edge.emplace();
         }
 
-        return *this;
+        // connect_to_firstpos(*this);
+        //
+        // if (!start_node.epsilon_edge) {
+        //     start_node.epsilon_edge.emplace();
+        // }
+        //
+        // return *this;
     }
 
     Regex::NFA &Regex::NFA::plus() {

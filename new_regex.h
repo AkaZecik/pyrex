@@ -32,12 +32,12 @@ namespace pyrex {
 
             typedef std::unordered_map<Group *, std::vector<GroupToken>> GroupToTokens;
             struct Node;
-            typedef std::unordered_map<char, std::map<Node *, GroupToTokens>> Edges;
-            typedef std::optional<GroupToTokens> EpsilonEdge;
+            typedef std::unordered_map<char, std::list<Node *>> Edges;
 
             struct Node {
-                Edges edges;
-                EpsilonEdge epsilon_edge;
+                std::unordered_map<char, std::set<Node *>> edges;
+                std::unordered_map<Node *, GroupToTokens> groups;
+                std::optional<GroupToTokens>  epsilon_edge;
 
                 void connect_to_firstpos(NFA const &nfa);
                 void clear();
