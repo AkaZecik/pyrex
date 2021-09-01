@@ -43,7 +43,6 @@ namespace pyrex {
                 std::unordered_map<Node *, GroupToTokens> node_to_groups;
                 std::optional<GroupToTokens>  epsilon_edge;
 
-                void connect_to_firstpos(NFA const &nfa);
                 void clear();
             };
 
@@ -58,12 +57,12 @@ namespace pyrex {
             NFA &operator=(NFA &&) = default;
             ~NFA() noexcept;
 
-            void connect_to_firstpos(NFA const &other);
+            bool match(std::string const &text, MatchType match_type) const;
 
             typedef std::pair<std::size_t, std::size_t> Match;
             typedef std::set<Match> Matches;
             typedef std::optional<Matches> MatchResult;
-            MatchResult traverse(std::string const &text, Group *group);
+            MatchResult traverse(std::string const &text, Group *group) const;
 
             static NFA from_ast(AST const &ast);
             static NFA from_ast_node(

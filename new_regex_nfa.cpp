@@ -5,36 +5,6 @@
  */
 
 namespace pyrex {
-    void Regex::NFA::Node::connect_to_firstpos(NFA const &nfa) {
-        for (auto const &[chr, nfa_start_edges_for_chr] : nfa.start_node.edges) {
-            auto &edges_for_chr = edges[chr];
-            auto edges_it = edges_for_chr.begin();
-
-            for (auto &[firstpos_node, firstpos_tokens] : nfa_start_edges_for_chr) {
-                while (edges_it != edges_for_chr.end() && edges_it->first < firstpos_node) {
-                    ++edges_it;
-                }
-
-                if (edges_it != edges_for_chr.end() && edges_it->first == firstpos_node) {
-                    // TODO: perhaps add 'bool' argument which specifies what to do in this branch
-                    //  e.g. ignore or merge
-                    ++edges_it;
-                } else {
-                    GroupToTokens new_tokens(*epsilon_edge);
-
-                    for (auto &[group, tokens] : firstpos_tokens) {
-                        auto &new_tokens_for_group = new_tokens[group];
-                        new_tokens_for_group.insert(
-                            new_tokens_for_group.cend(), tokens.cbegin(), tokens.cend());
-                    }
-
-                    edges_for_chr.emplace_hint(
-                        edges_it, firstpos_node, std::move(new_tokens));
-                }
-            }
-        }
-    }
-
     void Regex::NFA::Node::clear() {
         edges.clear();
         epsilon_edge.reset();
@@ -87,18 +57,6 @@ namespace pyrex {
     Regex::NFA::~NFA() noexcept {
         for (auto node : all_nodes) {
             delete node;
-        }
-    }
-
-    void Regex::NFA::connect_to_firstpos(NFA const &other) {
-        for (auto node : lastpos) {
-            node->connect_to_firstpos(other);
-        }
-
-        // TODO: do we want that here? what about % operator? won't this cause issues on
-        //  connect_to_firstpos(*other) if both NFAs have epsilon edges?
-        if (start_node.epsilon_edge) {
-            start_node.connect_to_firstpos(other);
         }
     }
 
