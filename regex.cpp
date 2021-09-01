@@ -171,7 +171,7 @@ class Regex {
         static NFA for_range(NFA nfa, int min, int max) {
             if (max == 0) {
                 // TODO: is it OK that we are loosing information?
-                //  what about regex (hello){0,0} and groups collected before?
+                //  what about regex (hello){0,0} and node_to_groups collected before?
                 //  should they be removed?
                 return for_empty();
             }

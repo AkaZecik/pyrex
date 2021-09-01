@@ -36,7 +36,7 @@ namespace pyrex {
 
             struct Node {
                 std::unordered_map<char, std::set<Node *>> edges;
-                std::unordered_map<Node *, GroupToTokens> groups;
+                std::unordered_map<Node *, GroupToTokens> node_to_groups;
                 std::optional<GroupToTokens>  epsilon_edge;
 
                 void connect_to_firstpos(NFA const &nfa);

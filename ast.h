@@ -24,7 +24,7 @@ namespace pyrex {
                 SMALL_S,
                 SMALL_W,
 
-                /* groups */
+                /* node_to_groups */
                 NUMBERED_CGROUP,
                 NAMED_CGROUP,
                 NON_CGROUP,

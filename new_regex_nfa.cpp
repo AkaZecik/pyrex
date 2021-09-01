@@ -56,23 +56,31 @@ namespace pyrex {
         for (auto[orig_node, new_node] : new_nodes) {
             new_node->epsilon_edge = orig_node->epsilon_edge;
 
-            for (auto &[c, orig_node_edges_for_c] : orig_node->edges) {
-                auto &new_node_edges_for_c = new_node->edges[c];
+            for (auto &[chr, orig_node_nbhs_for_chr] : orig_node->edges) {
+                auto &new_node_nbhs_for_chr = new_node->edges[chr];
 
-                for (auto &[nbh, tokens]: orig_node_edges_for_c) {
-                    new_node_edges_for_c[new_nodes[nbh]] = tokens;
+                for (auto nbh : orig_node_nbhs_for_chr) {
+                    new_node_nbhs_for_chr.insert(new_nodes[nbh]);
                 }
+            }
+
+            for (auto &[nbh, groups] : orig_node->node_to_groups) {
+                new_node->node_to_groups[new_nodes[nbh]] = groups;
             }
         }
 
         start_node.epsilon_edge = other.start_node.epsilon_edge;
 
-        for (auto &[c, orig_start_node_edges_for_c] : other.start_node.edges) {
-            auto &start_node_edges_for_c = start_node.edges[c];
+        for (auto &[chr, orig_start_node_nbhs_for_chr] : other.start_node.edges) {
+            auto &start_node_nbhs_for_chr = start_node.edges[chr];
 
-            for (auto &[nbh, tokens] : orig_start_node_edges_for_c) {
-                start_node_edges_for_c[new_nodes[nbh]] = tokens;
+            for (auto nbh : orig_start_node_nbhs_for_chr) {
+                start_node_nbhs_for_chr.insert(new_nodes[nbh]);
             }
+        }
+
+        for (auto &[nbh, groups] : other.start_node.node_to_groups) {
+            start_node.node_to_groups[new_nodes[nbh]] = groups;
         }
     }
 
@@ -287,14 +295,12 @@ namespace pyrex {
             tokens.push_back(GroupToken::LEAVE);
         }
 
-        for (auto &[c, edges_for_c] : start_node.edges) {
-            for (auto &[nbh, tokens] : edges_for_c) {
-                tokens[group].push_back(GroupToken::ENTER);
-            }
+        for (auto &[node, groups] : start_node.node_to_groups) {
+            groups[group].push_back(GroupToken::ENTER);
         }
 
-        for (auto lastpos_node : lastpos) {
-            (*lastpos_node->epsilon_edge)[group].push_back(GroupToken::LEAVE);
+        for (auto node : lastpos) {
+            (*node->epsilon_edge)[group].push_back(GroupToken::LEAVE);
         }
 
         return *this;
@@ -324,8 +330,9 @@ namespace pyrex {
                         *lastpos_edge_it == firstpos_node) {
                         ++lastpos_edge_it;
                     } else {
-                        auto &firstpos_groups = start_node.groups[firstpos_node];
-                        auto[new_tokens_it, _] = lastpos_node->groups
+                        lastpos_edges.emplace_hint(lastpos_edge_it, lastpos_node);
+                        auto &firstpos_groups = start_node.node_to_groups[firstpos_node];
+                        auto[new_tokens_it, _] = lastpos_node->node_to_groups
                             .emplace(firstpos_node, *lastpos_node->epsilon_edge);
                         new_tokens_it->second.insert(firstpos_groups.cbegin(),
                                                      firstpos_groups.cend());
