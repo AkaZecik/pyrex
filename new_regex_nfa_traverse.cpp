@@ -49,11 +49,21 @@ namespace pyrex {
                 already_on[node] = false;
             }
 
-            if (accepting && (match_type == MatchType::AMATCH || match_type == MatchType::LMATCH ||
-                              match_type == MatchType::FMATCH && text_it == text.cend())) {
+            if (accepting && (
+                match_type == MatchType::AMATCH ||
+                match_type == MatchType::LMATCH ||
+                text_it == text.cend() && (
+                    match_type == MatchType::FMATCH ||
+                    match_type == MatchType::RMATCH
+                ))) {
+                return true;
             }
 
-            if (match_type == MatchType::LMATCH || match_type == MatchType::AMATCH) {
+            if (text_it == text.cend()) {
+                return false;
+            }
+
+            if (match_type == MatchType::RMATCH || match_type == MatchType::AMATCH) {
                 new_state.push_back(&start_node);
             }
 
