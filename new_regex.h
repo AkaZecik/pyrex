@@ -120,6 +120,8 @@ namespace pyrex {
 
         void compile();
         std::string to_string();
+        Regex operator[](std::size_t) const;
+        Regex operator[](std::string) const;
 
         static Regex for_nothing();
         static Regex for_empty();

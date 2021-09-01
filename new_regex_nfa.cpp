@@ -452,9 +452,11 @@ namespace pyrex {
     }
 
     Regex::NFA &Regex::NFA::union_(NFA other) {
-        for (auto &[c, other_start_edges_for_c] : other.start_node.edges) {
-            start_node.edges[c].merge(other_start_edges_for_c);
+        for (auto &[chr, other_firstpos_nodes] : other.start_node.edges) {
+            start_node.edges[chr].merge(other_firstpos_nodes);
         }
+
+        start_node.node_to_groups.merge(other.start_node.node_to_groups);
 
         if (other.start_node.epsilon_edge) {
             if (start_node.epsilon_edge) {
@@ -473,15 +475,5 @@ namespace pyrex {
 
     Regex::NFA &Regex::NFA::percent(NFA other) {
         return concatenate(std::move(other.concatenate(*this).star()));
-
-        /* alternative, optimized implementation: */
-
-        // connect_to_firstpos(other); // TODO: fix epsilon edges
-        // other.connect_to_firstpos(*this); // TODO: fix epsilon edges
-        //
-        // all_nodes.splice(all_nodes.cend(), other.all_nodes);
-        // other.lastpos.clear();
-        // other.start_node.clear();
-        // return *this;
     }
 }
