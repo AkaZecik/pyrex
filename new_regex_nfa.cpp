@@ -2,6 +2,7 @@
 
 /* TODO
  *  - handle memory errors in functions representing operators
+ *  - possible optimizations on epsilon edges on power, min, max, range, concat operators
  */
 
 namespace pyrex {
@@ -52,6 +53,8 @@ namespace pyrex {
         for (auto &[nbh, groups] : other.start_node.node_to_groups) {
             start_node.node_to_groups[new_nodes[nbh]] = groups;
         }
+
+        size = other.size;
     }
 
     Regex::NFA::~NFA() noexcept {
@@ -170,6 +173,7 @@ namespace pyrex {
         nfa.all_nodes.push_back(node);
         nfa.lastpos.push_back(node);
         nfa.start_node.edges[chr].insert({node, {}});
+        nfa.size = 1;
         return nfa;
     }
 
@@ -179,6 +183,7 @@ namespace pyrex {
         node->epsilon_edge.emplace();
         nfa.all_nodes.push_back(node);
         nfa.lastpos.push_back(node);
+        nfa.size = 1;
 
         for (int i = 0; i < 128; ++i) {
             char chr = static_cast<char>(i);
@@ -194,6 +199,7 @@ namespace pyrex {
         node->epsilon_edge.emplace();
         nfa.all_nodes.push_back(node);
         nfa.lastpos.push_back(node);
+        nfa.size = 1;
 
         for (signed char chr = '0'; chr <= '9'; ++chr) {
             nfa.start_node.edges[chr].insert({node, {}});
@@ -208,6 +214,7 @@ namespace pyrex {
         node->epsilon_edge.emplace();
         nfa.all_nodes.push_back(node);
         nfa.lastpos.push_back(node);
+        nfa.size = 1;
 
         for (char chr : " \n\t\n\r\f\v") {
             nfa.start_node.edges[chr].insert({node, {}});
@@ -222,6 +229,7 @@ namespace pyrex {
         node->epsilon_edge.emplace();
         nfa.all_nodes.push_back(node);
         nfa.lastpos.push_back(node);
+        nfa.size = 1;
 
         for (char chr : "_0123456789"
                         "abcdefghijklmnopqrstuvwxyz"
@@ -307,6 +315,10 @@ namespace pyrex {
     }
 
     Regex::NFA &Regex::NFA::plus() {
+        if (2 * size > MAX_NUM_OF_NODES) {
+            throw std::runtime_error("Maximum number of NFA nodes reached");
+        }
+
         return concatenate(std::move(NFA(*this).star()));
     }
 
@@ -317,6 +329,10 @@ namespace pyrex {
     Regex::NFA &Regex::NFA::min(int min) {
         if (min == 0) {
             return star();
+        }
+
+        if ((min + 1) * size > MAX_NUM_OF_NODES) {
+            throw std::runtime_error("Maximum number of NFA nodes reached");
         }
 
         std::vector<NFA> copies(min, *this);
@@ -349,6 +365,10 @@ namespace pyrex {
             return *this;
         }
 
+        if (max * size > MAX_NUM_OF_NODES) {
+            throw std::runtime_error("Maximum number of NFA nodes reached");
+        }
+
         std::vector<NFA> copies(max - 1, *this);
 
         if (!start_node.epsilon_edge) {
@@ -365,6 +385,10 @@ namespace pyrex {
     }
 
     Regex::NFA &Regex::NFA::concatenate(NFA other) {
+        if (size + other.size > NFA::MAX_NUM_OF_NODES) {
+            throw std::runtime_error("Maximum number of NFA nodes reached");
+        }
+
         auto connect_to_other = [&other](NFA::Node *node) {
             for (auto const &[chr, firstpos_nodes] : other.start_node.edges) {
                 node->edges[chr].insert(firstpos_nodes.cbegin(), firstpos_nodes.cend());
@@ -406,10 +430,16 @@ namespace pyrex {
         }
 
         all_nodes.splice(all_nodes.cend(), other.all_nodes);
+        size += other.size;
         other.start_node.clear();
+        other.size = 0;
     }
 
     Regex::NFA &Regex::NFA::union_(NFA other) {
+        if (size + other.size > NFA::MAX_NUM_OF_NODES) {
+            throw std::runtime_error("Maximum number of NFA nodes reached");
+        }
+
         for (auto &[chr, other_firstpos_nodes] : other.start_node.edges) {
             start_node.edges[chr].merge(other_firstpos_nodes);
         }
@@ -426,12 +456,17 @@ namespace pyrex {
 
         all_nodes.splice(all_nodes.cend(), other.all_nodes);
         lastpos.splice(lastpos.cend(), other.lastpos);
-        other.start_node.edges.clear();
-        other.start_node.epsilon_edge.reset();
+        size += other.size;
+        other.start_node.clear();
+        other.size = 0;
         return *this;
     }
 
     Regex::NFA &Regex::NFA::percent(NFA other) {
+        if (2 * size + other.size > MAX_NUM_OF_NODES) {
+            throw std::runtime_error("Maximum number of NFA nodes reached");
+        }
+
         return concatenate(std::move(other.concatenate(*this).star()));
     }
 }

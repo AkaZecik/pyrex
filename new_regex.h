@@ -49,6 +49,7 @@ namespace pyrex {
             Node start_node;
             std::list<Node *> all_nodes;
             std::list<Node *> lastpos;
+            std::size_t size = 0;
 
             NFA() = default;
             NFA(NFA const &);
