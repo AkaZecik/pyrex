@@ -1,4 +1,4 @@
-#include "new_regex.h"
+#include "regex.h"
 
 /* TODO
  *  - handle memory errors in functions representing operators

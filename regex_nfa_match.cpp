@@ -1,4 +1,4 @@
-#include "new_regex.h"
+#include "regex.h"
 
 /* TODO:
  *  - what should happen if text contains characters outside of ASCII?

@@ -1,5 +1,5 @@
-#ifndef PYREX_NEW_REGEX_H
-#define PYREX_NEW_REGEX_H
+#ifndef PYREX_REGEX_H
+#define PYREX_REGEX_H
 
 #include <optional>
 #include <set>
@@ -149,4 +149,4 @@ namespace pyrex {
     };
 }
 
-#endif //PYREX_NEW_REGEX_H
+#endif //PYREX_REGEX_H
