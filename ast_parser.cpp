@@ -85,7 +85,7 @@ namespace pyrex {
 
                 auto result = results.back();
                 results.pop_back();
-                return result;
+                return {result.root, std::move(numbered_cgroups), std::move(named_cgroups)};
             } else {
                 throw std::runtime_error("Unknown token type");
             }
@@ -141,7 +141,15 @@ namespace pyrex {
                             throw std::runtime_error("Unterminated name of named group");
                         } else {
                             curr_pos += 1;
-                            stack.push_back(std::make_shared<NamedCGroupNode>(nullptr, name));
+
+                            if (named_cgroups.find(name) != named_cgroups.cend()) {
+                                throw std::runtime_error(
+                                    std::string("Duplicate named group: ").append(name));
+                            }
+
+                            auto group = std::make_shared<NamedCGroupNode>(nullptr, name);
+                            named_cgroups[name] = {group};
+                            stack.push_back(group);
                         }
 
                         return;
@@ -151,7 +159,9 @@ namespace pyrex {
                 throw std::runtime_error("Unknown group extension");
             }
         } else {
-            stack.push_back(std::make_shared<NumberedCGroupNode>(nullptr));
+            auto group = std::make_shared<NumberedCGroupNode>(nullptr);
+            numbered_cgroups.push_back({group});
+            stack.push_back(group);
         }
     }
 

@@ -4,6 +4,8 @@
 #include <utility>
 #include <memory>
 #include <vector>
+#include <optional>
+#include <unordered_map>
 
 /* TODO:
  *  - handle duplicate group names
@@ -271,16 +273,33 @@ namespace pyrex {
             std::string operator_repr() override;
         };
 
+        struct Group {
+            std::shared_ptr<Node> node;
+        };
+
+        typedef std::vector<Group> NumberedCGroups;
+        typedef std::unordered_map<std::string, Group> NamedCGroups;
+
     private:
         std::shared_ptr<Node> const root;
+        std::optional<NumberedCGroups const> numbered_cgroups;
+        std::optional<NamedCGroups const> named_cgroups;
+
+        static NumberedCGroups combine_numbered_cgroups(NumberedCGroups const &left, NumberedCGroups const &right);
+        static NamedCGroups combine_named_cgroups(NamedCGroups const &left, NamedCGroups const &right);
 
         explicit AST(std::shared_ptr<Node> root);
+        AST(std::shared_ptr<Node> root,
+            NumberedCGroups numbered_cgroups,
+            NamedCGroups named_cgroups);
 
     public:
         AST(AST const &) = default;
         AST(AST &&) = default;
 
         [[nodiscard]] std::shared_ptr<Node> get_root() const;
+        NumberedCGroups const &get_numbered_cgroups() const;
+        NamedCGroups const &get_named_cgroups() const;
 
         static AST from_regex(std::string const &regex);
         [[nodiscard]] std::string to_string() const;
@@ -293,7 +312,7 @@ namespace pyrex {
         static AST for_small_s();
         static AST for_small_w();
         static AST numbered_cgroup(AST const &ast);
-        static AST named_cgroup(AST const &ast, const std::string& name);
+        static AST named_cgroup(AST const &ast, const std::string &name);
         static AST non_cgroup(AST const &ast);
         static AST qmark(AST const &ast);
         static AST star(AST const &ast);
@@ -338,33 +357,43 @@ namespace pyrex {
             };
 
             struct Tokenizer {
+            private:
                 std::string const &regex;
                 std::size_t curr_pos;
 
+            public:
                 explicit Tokenizer(std::string const &regex);
                 Tokenizer() = delete;
                 Tokenizer(Tokenizer const &) = delete;
                 Tokenizer(Tokenizer &&) = delete;
 
                 std::vector<Token> get_all_tokens();
+
+            private:
                 Token get_token();
                 Token parse_escape();
                 char parse_hex();
             };
 
+        private:
             std::string const &regex;
+            NumberedCGroups numbered_cgroups;
+            NamedCGroups named_cgroups;
             std::vector<Token> all_tokens;
             std::vector<AST> results;
             std::vector<std::shared_ptr<AST::InternalNode>> stack;
             std::size_t curr_pos;
             bool concat_insertable;
 
+        public:
             explicit Parser(std::string const &regex);
             Parser() = delete;
             Parser(Parser const &) = delete;
             Parser(Parser &&) = delete;
 
             AST parse();
+
+        private:
             inline bool can_insert_concat();
             static inline bool after_concat(Token token);
             void parse_range();

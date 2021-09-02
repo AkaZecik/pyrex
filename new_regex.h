@@ -68,8 +68,8 @@ namespace pyrex {
             static NFA from_ast(AST const &ast);
             static NFA from_ast_node(
                 std::shared_ptr<AST::Node> const &ast_node,
-                std::list<Group> &numbered_groups,
-                std::map<std::string, Group> &named_groups
+                std::list<Group> &numbered_cgroups,
+                std::map<std::string, Group> &named_cgroups
             );
 
             static NFA for_nothing();
@@ -115,8 +115,8 @@ namespace pyrex {
 
     public:
         Regex(Regex const &);
-        Regex(Regex &&);
-        Regex(std::string regex);
+        Regex(Regex &&) = default;
+        explicit Regex(std::string regex);
 
         void compile();
         std::string to_string();
