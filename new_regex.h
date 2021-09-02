@@ -62,8 +62,8 @@ namespace pyrex {
 
             typedef std::pair<std::size_t, std::size_t> Match;
             typedef std::set<Match> Matches;
-            typedef std::optional<Matches> MatchResult;
-            MatchResult traverse(std::string const &text, Group *group) const;
+            typedef std::optional<Matches> MatchResult; // holds Matches if matched at all
+            MatchResult submatches(std::string const &text, MatchType match_type, Group *group) const;
 
             static NFA from_ast(AST const &ast);
             static NFA from_ast_node(
