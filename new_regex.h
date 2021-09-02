@@ -41,7 +41,7 @@ namespace pyrex {
             struct Node {
                 std::unordered_map<char, std::set<Node *>> edges;
                 std::unordered_map<Node *, GroupToTokens> node_to_groups;
-                std::optional<GroupToTokens>  epsilon_edge;
+                std::optional<GroupToTokens> epsilon_edge;
 
                 void clear();
             };
@@ -64,8 +64,10 @@ namespace pyrex {
 
             typedef std::pair<std::size_t, std::size_t> Match;
             typedef std::set<Match> Matches;
-            typedef std::optional<Matches> MatchResult; // holds Matches if matched at all
-            MatchResult submatches(std::string const &text, MatchType match_type, AST::Group *group) const;
+            typedef std::optional<Matches> MatchResult;
+            MatchResult submatches(
+                std::string const &text, MatchType match_type, AST::Group *group
+            ) const;
 
             static NFA from_ast(AST const &ast);
 
@@ -76,7 +78,6 @@ namespace pyrex {
                 AST::NamedCGroups const &named_cgroups
             );
 
-        public:
             static NFA for_nothing();
             static NFA for_empty();
             static NFA for_char(char chr);
@@ -96,7 +97,6 @@ namespace pyrex {
             NFA &concatenate(NFA other);
             NFA &union_(NFA other);
             NFA &percent(NFA other);
-            // just traverse, traverse, fullmatch, lmatch, amatch,
         };
 
         struct DFA {
@@ -134,7 +134,7 @@ namespace pyrex {
         static Regex for_small_w();
 
         Regex numbered_cgroup() const;
-        Regex named_cgroup(std::string const& name) const;
+        Regex named_cgroup(std::string const &name) const;
         Regex non_cgroup() const;
         Regex qmark() const;
         Regex star() const;
