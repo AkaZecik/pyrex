@@ -76,6 +76,7 @@ namespace pyrex {
                 AST::NamedCGroups const &named_cgroups
             );
 
+        public:
             static NFA for_nothing();
             static NFA for_empty();
             static NFA for_char(char chr);
@@ -112,6 +113,8 @@ namespace pyrex {
         std::optional<DFA> dfa;
         // we would like to build groups without building nfa first:
 
+        explicit Regex(AST ast);
+
     public:
         Regex(Regex const &);
         Regex(Regex &&) = default;
@@ -119,8 +122,8 @@ namespace pyrex {
 
         void compile();
         std::string to_string();
-        Regex operator[](std::size_t) const;
-        Regex operator[](std::string) const;
+        Regex operator[](std::size_t group_name) const;
+        Regex operator[](std::string const &group_name) const;
 
         static Regex for_nothing();
         static Regex for_empty();
@@ -130,22 +133,8 @@ namespace pyrex {
         static Regex for_small_s();
         static Regex for_small_w();
 
-        Regex &numbered_cgroup();
-        Regex &named_cgroup(std::string name);
-        Regex &non_cgroup();
-        Regex &qmark();
-        Regex &star();
-        Regex &plus();
-        Regex &power(int power);
-        Regex &min(int min);
-        Regex &max(int max);
-        Regex &range(int min, int max);
-        Regex &concat(Regex other);
-        Regex &union_(Regex other);
-        Regex &percent(Regex other);
-
         Regex numbered_cgroup() const;
-        Regex named_cgroup(std::string name) const;
+        Regex named_cgroup(std::string const& name) const;
         Regex non_cgroup() const;
         Regex qmark() const;
         Regex star() const;
