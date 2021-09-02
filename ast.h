@@ -285,13 +285,19 @@ namespace pyrex {
         std::optional<NumberedCGroups const> numbered_cgroups;
         std::optional<NamedCGroups const> named_cgroups;
 
-        static NumberedCGroups combine_numbered_cgroups(NumberedCGroups const &left, NumberedCGroups const &right);
-        static NamedCGroups combine_named_cgroups(NamedCGroups const &left, NamedCGroups const &right);
+        static NumberedCGroups combine_numbered_cgroups(
+            NumberedCGroups const &left, NumberedCGroups const &right
+        );
+        static NamedCGroups combine_named_cgroups(
+            NamedCGroups const &left, NamedCGroups const &right
+        );
 
         explicit AST(std::shared_ptr<Node> root);
-        AST(std::shared_ptr<Node> root,
+        AST(
+            std::shared_ptr<Node> root,
             NumberedCGroups numbered_cgroups,
-            NamedCGroups named_cgroups);
+            NamedCGroups named_cgroups
+        );
 
     public:
         AST(AST const &) = default;

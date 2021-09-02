@@ -64,10 +64,17 @@ namespace pyrex {
     }
 
     Regex::NFA Regex::NFA::from_ast(AST const &ast) {
-        return from_ast_node(ast.get_root());
+        auto numbered_cgroups_it = ast.get_numbered_cgroups().cbegin();
+        return from_ast_node(
+            ast.get_root(), numbered_cgroups_it, ast.get_named_cgroups()
+        );
     }
 
-    Regex::NFA Regex::NFA::from_ast_node(std::shared_ptr<AST::Node> const &ast_node) {
+    Regex::NFA Regex::NFA::from_ast_node(
+        std::shared_ptr<AST::Node> const &ast_node,
+        AST::NumberedCGroups::const_iterator &curr_numbered_group,
+        AST::NamedCGroups const &named_cgroups
+    ) {
         switch (ast_node->kind()) {
             case AST::Node::Kind::NOTHING: {
                 return for_nothing();
@@ -94,62 +101,90 @@ namespace pyrex {
             }
             case AST::Node::Kind::NUMBERED_CGROUP: {
                 auto group_node = std::dynamic_pointer_cast<AST::NumberedCGroupNode>(ast_node);
-                return std::move(from_ast_node(group_node->operand).for_numbered_cgroup());
+                auto &group = *curr_numbered_group;
+                return std::move(from_ast_node(
+                    group_node->operand, ++curr_numbered_group, named_cgroups
+                ).for_group(&group));
             }
             case AST::Node::Kind::NAMED_CGROUP: {
                 auto group_node = std::dynamic_pointer_cast<AST::NamedCGroupNode>(ast_node);
-                return std::move(from_ast_node(group_node->operand).for_named_cgroup());
+                auto &group = named_cgroups.find(group_node->name)->second;
+                return std::move(from_ast_node(
+                    group_node->operand, curr_numbered_group, named_cgroups
+                ).for_group(&group));
             }
             case AST::Node::Kind::NON_CGROUP: {
                 auto group_node = std::dynamic_pointer_cast<AST::NonCGroupNode>(ast_node);
-                return std::move(from_ast_node(group_node->operand).for_non_cgroup());
+                return std::move(from_ast_node(
+                    group_node->operand, curr_numbered_group, named_cgroups
+                ));
             }
             case AST::Node::Kind::STAR: {
                 auto star_node = std::dynamic_pointer_cast<AST::StarNode>(ast_node);
-                return std::move(from_ast_node(star_node->operand).star());
+                return std::move(from_ast_node(
+                    star_node->operand, curr_numbered_group, named_cgroups
+                ).star());
             }
             case AST::Node::Kind::PLUS: {
                 auto plus_node = std::dynamic_pointer_cast<AST::PlusNode>(ast_node);
-                return std::move(from_ast_node(plus_node->operand).plus());
+                return std::move(from_ast_node(
+                    plus_node->operand, curr_numbered_group, named_cgroups
+                ).plus());
             }
             case AST::Node::Kind::POWER: {
                 auto power_node = std::dynamic_pointer_cast<AST::PowerNode>(ast_node);
-                return std::move(from_ast_node(power_node->operand).power(power_node->power));
+                return std::move(from_ast_node(
+                    power_node->operand, curr_numbered_group, named_cgroups
+                ).power(power_node->power));
             }
             case AST::Node::Kind::MIN: {
                 auto min_node = std::dynamic_pointer_cast<AST::MinNode>(ast_node);
-                return std::move(from_ast_node(min_node->operand).min(min_node->min));
+                return std::move(from_ast_node(
+                    min_node->operand, curr_numbered_group, named_cgroups
+                ).min(min_node->min));
             }
             case AST::Node::Kind::MAX: {
                 auto max_node = std::dynamic_pointer_cast<AST::MaxNode>(ast_node);
-                return std::move(from_ast_node(max_node->operand).max(max_node->max));
+                return std::move(from_ast_node(
+                    max_node->operand, curr_numbered_group, named_cgroups
+                ).max(max_node->max));
             }
             case AST::Node::Kind::RANGE: {
                 auto range_node = std::dynamic_pointer_cast<AST::RangeNode>(ast_node);
                 return std::move(
-                    from_ast_node(range_node->operand).range(range_node->min, range_node->max));
+                    from_ast_node(
+                        range_node->operand, curr_numbered_group, named_cgroups
+                    ).range(range_node->min, range_node->max));
             }
             case AST::Node::Kind::QMARK: {
                 auto qmark_node = std::dynamic_pointer_cast<AST::QMarkNode>(ast_node);
-                return std::move(from_ast_node(qmark_node->operand).qmark());
+                return std::move(from_ast_node(
+                    qmark_node->operand, curr_numbered_group, named_cgroups
+                ).qmark());
             }
             case AST::Node::Kind::CONCAT: {
                 auto concat_node = std::dynamic_pointer_cast<AST::ConcatNode>(ast_node);
-                return std::move(from_ast_node(concat_node->left_operand).concatenate(
-                    from_ast_node(concat_node->right_operand)
-                ));
+                return std::move(from_ast_node(
+                    concat_node->left_operand, curr_numbered_group, named_cgroups
+                ).concatenate(from_ast_node(
+                    concat_node->right_operand, curr_numbered_group, named_cgroups
+                )));
             }
             case AST::Node::Kind::UNION: {
                 auto union_node = std::dynamic_pointer_cast<AST::UnionNode>(ast_node);
-                return std::move(from_ast_node(union_node->left_operand).union_(
-                    from_ast_node(union_node->right_operand)
-                ));
+                return std::move(from_ast_node(
+                    union_node->left_operand, curr_numbered_group, named_cgroups
+                ).union_(from_ast_node(
+                    union_node->right_operand, curr_numbered_group, named_cgroups
+                )));
             }
             case AST::Node::Kind::PERCENT: {
                 auto percent_node = std::dynamic_pointer_cast<AST::PercentNode>(ast_node);
-                return std::move(from_ast_node(percent_node->left_operand).percent(
-                    from_ast_node(percent_node->right_operand)
-                ));
+                return std::move(from_ast_node(
+                    percent_node->left_operand, curr_numbered_group, named_cgroups
+                ).percent(from_ast_node(
+                    percent_node->right_operand, curr_numbered_group, named_cgroups
+                )));
             }
             default:
                 throw std::runtime_error("Unknown AST node kind");
@@ -240,23 +275,9 @@ namespace pyrex {
         return nfa;
     }
 
-    Regex::NFA &Regex::NFA::for_non_cgroup() {
-        return *this;
-    }
-
-    Regex::NFA &Regex::NFA::for_numbered_cgroup() {
-        Group *numbered_group = nullptr; // TODO
-        return for_group(numbered_group);
-    }
-
-    Regex::NFA &Regex::NFA::for_named_cgroup() {
-        Group *named_group = nullptr; // TODO
-        return for_group(named_group);
-    }
-
-    Regex::NFA &Regex::NFA::for_group(Group *group) {
+    Regex::NFA &Regex::NFA::for_group(AST::Group const *group) {
         if (start_node.epsilon_edge) {
-            auto &tokens = (*start_node.epsilon_edge)[group];
+            auto &tokens = (*start_node.epsilon_edge).find(group)->second;
             tokens.push_back(GroupToken::ENTER);
             tokens.push_back(GroupToken::LEAVE);
         }

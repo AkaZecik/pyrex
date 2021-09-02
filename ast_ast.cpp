@@ -29,6 +29,13 @@ namespace pyrex {
 
     AST::AST(std::shared_ptr<Node> root) : root{std::move(root)} {}
 
+    AST::AST(std::shared_ptr<Node> root,
+             NumberedCGroups numbered_cgroups,
+             NamedCGroups named_cgroups)
+        : root{std::move(root)},
+          numbered_cgroups{numbered_cgroups},
+          named_cgroups{named_cgroups} {}
+
     std::shared_ptr<AST::Node> AST::get_root() const {
         return root;
     }

@@ -34,7 +34,7 @@ namespace pyrex {
                 ENTER, LEAVE,
             };
 
-            typedef std::unordered_map<Group *, std::list<GroupToken>> GroupToTokens;
+            typedef std::unordered_map<AST::Group const *, std::list<GroupToken>> GroupToTokens;
             struct Node;
             typedef std::unordered_map<char, std::list<Node *>> Edges;
 
@@ -46,11 +46,13 @@ namespace pyrex {
                 void clear();
             };
 
+        private:
             Node start_node;
             std::list<Node *> all_nodes;
             std::list<Node *> lastpos;
             std::size_t size = 0;
 
+        public:
             NFA() = default;
             NFA(NFA const &);
             NFA(NFA &&) = default;
@@ -63,13 +65,15 @@ namespace pyrex {
             typedef std::pair<std::size_t, std::size_t> Match;
             typedef std::set<Match> Matches;
             typedef std::optional<Matches> MatchResult; // holds Matches if matched at all
-            MatchResult submatches(std::string const &text, MatchType match_type, Group *group) const;
+            MatchResult submatches(std::string const &text, MatchType match_type, AST::Group *group) const;
 
             static NFA from_ast(AST const &ast);
+
+        private:
             static NFA from_ast_node(
                 std::shared_ptr<AST::Node> const &ast_node,
-                std::list<Group> &numbered_cgroups,
-                std::map<std::string, Group> &named_cgroups
+                AST::NumberedCGroups::const_iterator &numbered_group_it,
+                AST::NamedCGroups const &named_cgroups
             );
 
             static NFA for_nothing();
@@ -80,10 +84,7 @@ namespace pyrex {
             static NFA for_small_s();
             static NFA for_small_w();
 
-            NFA &for_non_cgroup();
-            NFA &for_numbered_cgroup();
-            NFA &for_named_cgroup();
-            NFA &for_group(Group *group);
+            NFA &for_group(AST::Group const *group);
             NFA &qmark();
             NFA &star();
             NFA &plus();
@@ -110,8 +111,6 @@ namespace pyrex {
         std::optional<NFA> nfa;
         std::optional<DFA> dfa;
         // we would like to build groups without building nfa first:
-        std::optional<std::list<Group>> numbered_groups;
-        std::optional<std::map<std::string, Group>> named_groups;
 
     public:
         Regex(Regex const &);

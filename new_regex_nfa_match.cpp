@@ -83,7 +83,7 @@ namespace pyrex {
     }
 
     Regex::NFA::MatchResult Regex::NFA::submatches(
-        std::string const &text, MatchType match_type, Group *group
+        std::string const &text, MatchType match_type, AST::Group *group
     ) const {
         struct Pawn {
             std::set<std::size_t> entered;
