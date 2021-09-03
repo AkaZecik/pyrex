@@ -204,7 +204,7 @@ namespace pyrex {
 
     Regex::NFA Regex::NFA::for_char(char chr) {
         NFA nfa;
-        auto node = new Node();
+        auto node = new Node{.chr_ = std::string({chr}), .id = ++counter}; // TODO: remove
         node->epsilon_edge.emplace();
         nfa.all_nodes.push_back(node);
         nfa.lastpos.push_back(node);
@@ -215,7 +215,7 @@ namespace pyrex {
 
     Regex::NFA Regex::NFA::for_dot() {
         NFA nfa;
-        auto node = new Node();
+        auto node = new Node{.chr_ = "dot", .id = ++counter}; // TODO: remove
         node->epsilon_edge.emplace();
         nfa.all_nodes.push_back(node);
         nfa.lastpos.push_back(node);
@@ -231,7 +231,7 @@ namespace pyrex {
 
     Regex::NFA Regex::NFA::for_small_d() {
         NFA nfa;
-        auto node = new Node();
+        auto node = new Node{.chr_ = "small_d", .id = ++counter}; // TODO: remove
         node->epsilon_edge.emplace();
         nfa.all_nodes.push_back(node);
         nfa.lastpos.push_back(node);
@@ -246,7 +246,7 @@ namespace pyrex {
 
     Regex::NFA Regex::NFA::for_small_s() {
         NFA nfa;
-        auto node = new Node();
+        auto node = new Node{.chr_ = "small_s", .id = ++counter}; // TODO: remove
         node->epsilon_edge.emplace();
         nfa.all_nodes.push_back(node);
         nfa.lastpos.push_back(node);
@@ -261,7 +261,7 @@ namespace pyrex {
 
     Regex::NFA Regex::NFA::for_small_w() {
         NFA nfa;
-        auto node = new Node();
+        auto node = new Node{.chr_ = "small_w", .id = ++counter}; // TODO: remove
         node->epsilon_edge.emplace();
         nfa.all_nodes.push_back(node);
         nfa.lastpos.push_back(node);
@@ -318,7 +318,7 @@ namespace pyrex {
                         *lastpos_edge_it == firstpos_node) {
                         ++lastpos_edge_it;
                     } else {
-                        lastpos_edges_for_chr.emplace_hint(lastpos_edge_it, lastpos_node);
+                        lastpos_edges_for_chr.emplace_hint(lastpos_edge_it, firstpos_node);
                         auto &firstpos_groups = start_node.node_to_groups[firstpos_node];
                         auto[new_tokens_it, _] = lastpos_node->node_to_groups
                             .emplace(firstpos_node, *lastpos_node->epsilon_edge);
@@ -467,6 +467,7 @@ namespace pyrex {
             start_node.edges[chr].merge(other_firstpos_nodes);
         }
 
+        // TODO: doesn't work?
         start_node.node_to_groups.merge(other.start_node.node_to_groups);
 
         if (other.start_node.epsilon_edge) {

@@ -1,4 +1,5 @@
 #include "regex.h"
+#include <iostream>
 
 /* TODO:
  *  - what should happen if text contains characters outside of ASCII?
@@ -76,6 +77,7 @@ namespace pyrex {
                 return false;
             }
 
+            old_state.clear();
             std::swap(old_state, new_state);
         }
 

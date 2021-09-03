@@ -17,16 +17,14 @@
  */
 
 namespace pyrex {
+    static int counter = 0; // TODO: remove
+
     struct Regex {
         enum class MatchType {
             LMATCH, RMATCH, FMATCH, AMATCH,
         };
 
     private:
-        struct Group {
-            std::shared_ptr<AST::Node> const group;
-        };
-
         struct NFA {
             inline static std::size_t const MAX_NUM_OF_NODES = 100000;
 
@@ -43,11 +41,14 @@ namespace pyrex {
                 std::unordered_map<Node *, GroupToTokens> node_to_groups;
                 std::optional<GroupToTokens> epsilon_edge;
 
+                std::string chr_; // TODO: remove
+                int id; // TODO: remove
+
                 void clear();
             };
 
         private:
-            Node start_node;
+            Node start_node{.id = 0};
             std::list<Node *> all_nodes;
             std::list<Node *> lastpos;
             std::size_t size = 0;
