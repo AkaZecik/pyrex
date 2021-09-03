@@ -79,6 +79,10 @@ namespace pyrex {
                     throw std::runtime_error("Missing closing parenthesis");
                 }
 
+                if (results.empty()) {
+                    throw std::runtime_error("Empty regex");
+                }
+
                 if (results.size() > 1) {
                     throw std::runtime_error("Not enough operators");
                 }

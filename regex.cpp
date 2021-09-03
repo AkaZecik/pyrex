@@ -11,13 +11,21 @@ namespace pyrex {
     Regex::Regex(Regex const &other) : ast{other.ast}, regex{other.regex} {}
     Regex::Regex(std::string regex) : ast{AST::from_regex(regex)}, regex(regex) {}
 
+    Regex::NFA const &Regex::get_nfa() const {
+        if (!nfa) {
+            nfa = NFA::from_ast(ast);
+        }
+
+        return *nfa;
+    }
+
     void Regex::compile() {
         if (!nfa) {
             nfa = NFA::from_ast(ast);
         }
     }
 
-    std::string Regex::to_string() {
+    std::string Regex::to_string() const {
         if (!regex) {
             regex = ast.to_string();
         }
@@ -44,6 +52,22 @@ namespace pyrex {
         }
 
         return Regex{group_it->second.node->to_string()};
+    }
+
+    bool Regex::fmatch(const std::string &text) const {
+        return get_nfa().match(text, MatchType::FMATCH);
+    }
+
+    bool Regex::lmatch(const std::string &text) const {
+        return get_nfa().match(text, MatchType::LMATCH);
+    }
+
+    bool Regex::rmatch(const std::string &text) const {
+        return get_nfa().match(text, MatchType::RMATCH);
+    }
+
+    bool Regex::amatch(const std::string &text) const {
+        return get_nfa().match(text, MatchType::AMATCH);
     }
 
     Regex Regex::for_nothing() {

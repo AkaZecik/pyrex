@@ -3,6 +3,7 @@
 /* TODO
  *  - handle memory errors in functions representing operators
  *  - possible optimizations on epsilon edges on power, min, max, range, concat operators
+ *  - it's possible to predict size of NFA ahead of time
  */
 
 namespace pyrex {
@@ -207,7 +208,7 @@ namespace pyrex {
         node->epsilon_edge.emplace();
         nfa.all_nodes.push_back(node);
         nfa.lastpos.push_back(node);
-        nfa.start_node.edges[chr].insert({node, {}});
+        nfa.start_node.edges[chr].insert({node});
         nfa.size = 1;
         return nfa;
     }
@@ -222,7 +223,7 @@ namespace pyrex {
 
         for (int i = 0; i < 128; ++i) {
             char chr = static_cast<char>(i);
-            nfa.start_node.edges[chr].insert({node, {}});
+            nfa.start_node.edges[chr].insert({node});
         }
 
         return nfa;
@@ -237,7 +238,7 @@ namespace pyrex {
         nfa.size = 1;
 
         for (signed char chr = '0'; chr <= '9'; ++chr) {
-            nfa.start_node.edges[chr].insert({node, {}});
+            nfa.start_node.edges[chr].insert({node});
         }
 
         return nfa;
@@ -252,7 +253,7 @@ namespace pyrex {
         nfa.size = 1;
 
         for (char chr : " \n\t\n\r\f\v") {
-            nfa.start_node.edges[chr].insert({node, {}});
+            nfa.start_node.edges[chr].insert({node});
         }
 
         return nfa;
@@ -269,7 +270,7 @@ namespace pyrex {
         for (char chr : "_0123456789"
                         "abcdefghijklmnopqrstuvwxyz"
                         "ABCDEFGHIJKLMNOPQRSTUVWXYZ") {
-            nfa.start_node.edges[chr].insert({node, {}});
+            nfa.start_node.edges[chr].insert({node});
         }
 
         return nfa;
@@ -277,7 +278,7 @@ namespace pyrex {
 
     Regex::NFA &Regex::NFA::for_group(AST::Group const *group) {
         if (start_node.epsilon_edge) {
-            auto &tokens = (*start_node.epsilon_edge).find(group)->second;
+            auto &tokens = (*start_node.epsilon_edge)[group];
             tokens.push_back(GroupToken::ENTER);
             tokens.push_back(GroupToken::LEAVE);
         }
@@ -454,6 +455,7 @@ namespace pyrex {
         size += other.size;
         other.start_node.clear();
         other.size = 0;
+        return *this;
     }
 
     Regex::NFA &Regex::NFA::union_(NFA other) {

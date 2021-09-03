@@ -108,12 +108,14 @@ namespace pyrex {
         };
 
         AST ast;
-        std::optional<std::string> regex;
-        std::optional<NFA> nfa;
-        std::optional<DFA> dfa;
+        mutable std::optional<std::string> regex;
+        mutable std::optional<NFA> nfa;
+        mutable std::optional<DFA> dfa;
         // we would like to build groups without building nfa first:
 
         explicit Regex(AST ast);
+
+        NFA const &get_nfa() const;
 
     public:
         Regex(Regex const &);
@@ -121,9 +123,14 @@ namespace pyrex {
         explicit Regex(std::string regex);
 
         void compile();
-        std::string to_string();
+        std::string to_string() const;
         Regex operator[](std::size_t group_name) const;
         Regex operator[](std::string const &group_name) const;
+
+        bool fmatch(std::string const &text) const;
+        bool lmatch(std::string const &text) const;
+        bool rmatch(std::string const &text) const;
+        bool amatch(std::string const &text) const;
 
         static Regex for_nothing();
         static Regex for_empty();
