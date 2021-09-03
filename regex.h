@@ -24,6 +24,10 @@ namespace pyrex {
             LMATCH, RMATCH, FMATCH, AMATCH,
         };
 
+        typedef std::pair<std::size_t, std::size_t> Match;
+        typedef std::set<Match> Matches;
+        typedef std::optional<Matches> MatchResult;
+
     private:
         struct NFA {
             inline static std::size_t const MAX_NUM_OF_NODES = 100000;
@@ -62,12 +66,8 @@ namespace pyrex {
             ~NFA() noexcept;
 
             bool match(std::string const &text, MatchType match_type) const;
-
-            typedef std::pair<std::size_t, std::size_t> Match;
-            typedef std::set<Match> Matches;
-            typedef std::optional<Matches> MatchResult;
             MatchResult submatches(
-                std::string const &text, MatchType match_type, AST::Group *group
+                std::string const &text, MatchType match_type, AST::Group const *group
             ) const;
 
             static NFA from_ast(AST const &ast);
@@ -132,6 +132,18 @@ namespace pyrex {
         bool lmatch(std::string const &text) const;
         bool rmatch(std::string const &text) const;
         bool amatch(std::string const &text) const;
+
+        MatchResult fsubmatches(std::string const &text, std::size_t group_number) const;
+        MatchResult fsubmatches(std::string const &text, std::string const &group_name) const;
+        MatchResult lsubmatches(std::string const &text, std::size_t group_number) const;
+        MatchResult lsubmatches(std::string const &text, std::string const &group_name) const;
+        MatchResult rsubmatches(std::string const &text, std::size_t group_number) const;
+        MatchResult rsubmatches(std::string const &text, std::string const &group_name) const;
+        MatchResult asubmatches(std::string const &text, std::size_t group_number) const;
+        MatchResult asubmatches(std::string const &text, std::string const &group_name) const;
+
+        AST::Group const *get_group(std::size_t group_number) const;
+        AST::Group const *get_group(std::string const &group_name) const;
 
         static Regex for_nothing();
         static Regex for_empty();

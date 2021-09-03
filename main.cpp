@@ -71,12 +71,38 @@ void test_match() {
 }
 
 void test_submatch() {
+    std::vector<std::pair<std::string, std::vector<std::string>>> tests;
 
+    pyrex::Regex regex("((a)*)*");
+    std::vector<std::string> texts({
+        // "",
+        // "a",
+        // "aa",
+        "aaaaaaaaaa",
+    });
+
+    std::cout << regex.to_string() << std::endl;
+
+    for (auto &text : texts) {
+        std::cout << text << std::endl;
+        std::cout << "fsubmatches:" << std::endl;
+        auto result = regex.fsubmatches(text, 0);
+
+        if (result) {
+            std::cout << "num of matches: " << result->size() << std::endl;
+
+            for (auto [start, end] : *result) {
+                std::cout << start << " " << end << std::endl;
+            }
+        } else {
+            std::cout << "No matches!";
+        }
+    }
 }
 
 int main() {
     std::cout << std::boolalpha;
 
-    test_match();
-    test_sumbmatch();
+    // test_match();
+    test_submatch();
 }

@@ -54,22 +54,6 @@ namespace pyrex {
         return Regex{group_it->second.node->to_string()};
     }
 
-    bool Regex::fmatch(const std::string &text) const {
-        return get_nfa().match(text, MatchType::FMATCH);
-    }
-
-    bool Regex::lmatch(const std::string &text) const {
-        return get_nfa().match(text, MatchType::LMATCH);
-    }
-
-    bool Regex::rmatch(const std::string &text) const {
-        return get_nfa().match(text, MatchType::RMATCH);
-    }
-
-    bool Regex::amatch(const std::string &text) const {
-        return get_nfa().match(text, MatchType::AMATCH);
-    }
-
     Regex Regex::for_nothing() {
         return Regex{AST::for_nothing()};
     }

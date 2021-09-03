@@ -15,6 +15,6 @@ add_executable(
         regex.cpp
         regex_nfa.cpp
         regex_nfa_match.cpp
-)
+        regex_matches.cpp)
 
 add_executable(ast_main ast_main.cpp ast.h ast.cpp ast_node.cpp ast_parser.cpp ast_tokenizer.cpp)

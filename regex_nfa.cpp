@@ -475,7 +475,6 @@ namespace pyrex {
             start_node.edges[chr].merge(other_firstpos_nodes);
         }
 
-        // TODO: doesn't work?
         start_node.node_to_groups.merge(other.start_node.node_to_groups);
 
         if (other.start_node.epsilon_edge) {
