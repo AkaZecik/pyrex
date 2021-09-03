@@ -209,6 +209,7 @@ namespace pyrex {
         nfa.all_nodes.push_back(node);
         nfa.lastpos.push_back(node);
         nfa.start_node.edges[chr].insert({node});
+        nfa.start_node.node_to_groups[node];
         nfa.size = 1;
         return nfa;
     }
@@ -219,6 +220,7 @@ namespace pyrex {
         node->epsilon_edge.emplace();
         nfa.all_nodes.push_back(node);
         nfa.lastpos.push_back(node);
+        nfa.start_node.node_to_groups[node];
         nfa.size = 1;
 
         for (int i = 0; i < 128; ++i) {
@@ -235,6 +237,7 @@ namespace pyrex {
         node->epsilon_edge.emplace();
         nfa.all_nodes.push_back(node);
         nfa.lastpos.push_back(node);
+        nfa.start_node.node_to_groups[node];
         nfa.size = 1;
 
         for (signed char chr = '0'; chr <= '9'; ++chr) {
@@ -250,6 +253,7 @@ namespace pyrex {
         node->epsilon_edge.emplace();
         nfa.all_nodes.push_back(node);
         nfa.lastpos.push_back(node);
+        nfa.start_node.node_to_groups[node];
         nfa.size = 1;
 
         for (char chr : " \n\t\n\r\f\v") {
@@ -265,6 +269,7 @@ namespace pyrex {
         node->epsilon_edge.emplace();
         nfa.all_nodes.push_back(node);
         nfa.lastpos.push_back(node);
+        nfa.start_node.node_to_groups[node];
         nfa.size = 1;
 
         for (char chr : "_0123456789"
@@ -322,8 +327,11 @@ namespace pyrex {
                         auto &firstpos_groups = start_node.node_to_groups[firstpos_node];
                         auto[new_tokens_it, _] = lastpos_node->node_to_groups
                             .emplace(firstpos_node, *lastpos_node->epsilon_edge);
-                        new_tokens_it->second.insert(firstpos_groups.cbegin(),
-                                                     firstpos_groups.cend());
+
+                        for (auto &[group, tokens] : firstpos_groups) {
+                            auto &new_tokens = new_tokens_it->second[group];
+                            new_tokens.insert(new_tokens.cend(), tokens.cbegin(), tokens.cend());
+                        }
                     }
                 }
             }

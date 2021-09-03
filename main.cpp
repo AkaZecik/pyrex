@@ -1,28 +1,27 @@
 #include "regex.h"
 #include <iostream>
 
-int main() {
-    std::cout << std::boolalpha;
+void test_match() {
     std::vector<std::pair<std::string, std::vector<std::string>>> tests;
 
-    // tests.push_back({"a", {"", "a", "aa", "aaaaaaaa"}});
-    // tests.push_back({"A.+n", {
-    //     "Artur zda egzamin",
-    //     "Artur nie zda egzaminu",
-    //     "artur egzamin",
-    //     "A.+n",
-    // }});
-    // tests.push_back({"((?:a)*)*b*",{
-    //     "aaaaaaaaaaaaaaaaaaa",
-    //     "",
-    //     "aaaaaaabbbbbbbb",
-    //     "bbbbbbbbb",
-    //     "ab",
-    //     "a",
-    //     "b",
-    //     "ba",
-    //     "bbbbbaaaaa",
-    // }});
+    tests.push_back({"a", {"", "a", "aa", "aaaaaaaa"}});
+    tests.push_back({"A.+n", {
+        "Artur zda egzamin",
+        "Artur nie zda egzaminu",
+        "artur egzamin",
+        "A.+n",
+        }});
+    tests.push_back({"((?:a)*)*b*",{
+        "aaaaaaaaaaaaaaaaaaa",
+        "",
+        "aaaaaaabbbbbbbb",
+        "bbbbbbbbb",
+        "ab",
+        "a",
+        "b",
+        "ba",
+        "bbbbbaaaaa",
+        }});
     tests.push_back({"((ab?)|ba?bb)*abb", {
         "",
         "abb",
@@ -34,13 +33,14 @@ int main() {
         "bbbabb",
         "bbbbabb",
         "abbbaaaaabaabbbabaabb",
-    }});
+        }});
 
     for (auto &[regex, texts] : tests) {
         pyrex::counter = 0;
         std::cout << "regex: " << regex << std::endl;
 
         pyrex::Regex Regex(regex);
+        Regex.compile();
 
         std::cout << "fmatch:" << std::endl;
 
@@ -68,4 +68,15 @@ int main() {
 
         std::cout << std::endl << "-------------------------------------------------\n\n";
     }
+}
+
+void test_submatch() {
+
+}
+
+int main() {
+    std::cout << std::boolalpha;
+
+    test_match();
+    test_sumbmatch();
 }
