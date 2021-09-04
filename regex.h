@@ -34,18 +34,20 @@ namespace pyrex {
             inline static std::size_t const MAX_NUM_OF_NODES = 100000;
 
             enum class GroupToken {
-                ENTER, LEAVE, OPTIONAL_LEAVE,
+                ENTER, LEAVE,
             };
 
-            typedef std::unordered_map<AST::Group const *, std::list<GroupToken>> GroupToTokens;
-            struct Node;
-            typedef std::unordered_map<char, std::list<Node *>> Edges;
+            struct GroupInfo {
+                std::list<GroupToken> tokens;
+                bool optional_path = false;
+            };
+
+            typedef std::unordered_map<AST::Group const *, GroupInfo> GroupToTokens;
 
             struct Node {
-                std::unordered_map<char, std::set<Node *>> edges;
-                std::unordered_map<Node const *, GroupToTokens> node_to_groups;
+                std::unordered_map<char, std::set<Node const *>> edges_by_char;
+                std::unordered_map<Node const *, GroupToTokens> edges;
                 std::optional<GroupToTokens> epsilon_edge;
-                std::unordered_set<Node const *> empty_groups;
 
                 std::string chr_; // TODO: remove
                 int id; // TODO: remove

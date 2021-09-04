@@ -42,7 +42,7 @@
 
 
 
-* Parse regex with operators *, |, ?, concat, \xNN, literals and numbered node_to_groups ()
+* Parse regex with operators *, |, ?, concat, \xNN, literals and numbered edges ()
 * Add handling of +
 * Add handling of {n}
 * Add handling of {n,}, {,n}, {n,m}
@@ -54,7 +54,7 @@
 * Split parser.cpp into ast.cpp and parser.cpp
 * Wrap std::vector<Node *> results into a struct
 * Wrap std::vector<InternalNode *> stack into a struct
-* Create drop_operators_until_end (operators/node_to_groups);
+* Create drop_operators_until_end (operators/edges);
 * Count nodes constructed/deconstructed for debugging
 * Verify correct usage of "char" type (can it have more than 1 byte?)
 * to_string works only under the assumption that AST was constructed with a parser+tokenizer

@@ -2,13 +2,13 @@
 
 /* TODO
  *  - handle memory errors in functions representing operators
- *  - possible optimizations on epsilon edges on power, min, max, range, concat operators
+ *  - possible optimizations on epsilon edges_by_char on power, min, max, range, concat operators
  *  - it's possible to predict size of NFA ahead of time
  */
 
 namespace pyrex {
     void Regex::NFA::Node::clear() {
-        edges.clear();
+        edges_by_char.clear();
         epsilon_edge.reset();
     }
 
@@ -28,31 +28,31 @@ namespace pyrex {
         for (auto[orig_node, new_node] : new_nodes) {
             new_node->epsilon_edge = orig_node->epsilon_edge;
 
-            for (auto &[chr, orig_node_nbhs_for_chr] : orig_node->edges) {
-                auto &new_node_nbhs_for_chr = new_node->edges[chr];
+            for (auto &[chr, orig_node_nbhs_for_chr] : orig_node->edges_by_char) {
+                auto &new_node_nbhs_for_chr = new_node->edges_by_char[chr];
 
                 for (auto nbh : orig_node_nbhs_for_chr) {
                     new_node_nbhs_for_chr.insert(new_nodes[nbh]);
                 }
             }
 
-            for (auto &[nbh, groups] : orig_node->node_to_groups) {
-                new_node->node_to_groups[new_nodes[nbh]] = groups;
+            for (auto &[nbh, groups] : orig_node->edges) {
+                new_node->edges[new_nodes[nbh]] = groups;
             }
         }
 
         start_node.epsilon_edge = other.start_node.epsilon_edge;
 
-        for (auto &[chr, orig_start_node_nbhs_for_chr] : other.start_node.edges) {
-            auto &start_node_nbhs_for_chr = start_node.edges[chr];
+        for (auto &[chr, orig_start_node_nbhs_for_chr] : other.start_node.edges_by_char) {
+            auto &start_node_nbhs_for_chr = start_node.edges_by_char[chr];
 
             for (auto nbh : orig_start_node_nbhs_for_chr) {
                 start_node_nbhs_for_chr.insert(new_nodes[nbh]);
             }
         }
 
-        for (auto &[nbh, groups] : other.start_node.node_to_groups) {
-            start_node.node_to_groups[new_nodes[nbh]] = groups;
+        for (auto &[nbh, groups] : other.start_node.edges) {
+            start_node.edges[new_nodes[nbh]] = groups;
         }
 
         size = other.size;
@@ -208,8 +208,8 @@ namespace pyrex {
         node->epsilon_edge.emplace();
         nfa.all_nodes.push_back(node);
         nfa.lastpos.push_back(node);
-        nfa.start_node.edges[chr].insert({node});
-        nfa.start_node.node_to_groups[node];
+        nfa.start_node.edges_by_char[chr].insert({node});
+        nfa.start_node.edges[node];
         nfa.size = 1;
         return nfa;
     }
@@ -220,12 +220,12 @@ namespace pyrex {
         node->epsilon_edge.emplace();
         nfa.all_nodes.push_back(node);
         nfa.lastpos.push_back(node);
-        nfa.start_node.node_to_groups[node];
+        nfa.start_node.edges[node];
         nfa.size = 1;
 
         for (int i = 0; i < 128; ++i) {
             char chr = static_cast<char>(i);
-            nfa.start_node.edges[chr].insert({node});
+            nfa.start_node.edges_by_char[chr].insert({node});
         }
 
         return nfa;
@@ -237,11 +237,11 @@ namespace pyrex {
         node->epsilon_edge.emplace();
         nfa.all_nodes.push_back(node);
         nfa.lastpos.push_back(node);
-        nfa.start_node.node_to_groups[node];
+        nfa.start_node.edges[node];
         nfa.size = 1;
 
         for (signed char chr = '0'; chr <= '9'; ++chr) {
-            nfa.start_node.edges[chr].insert({node});
+            nfa.start_node.edges_by_char[chr].insert({node});
         }
 
         return nfa;
@@ -253,11 +253,11 @@ namespace pyrex {
         node->epsilon_edge.emplace();
         nfa.all_nodes.push_back(node);
         nfa.lastpos.push_back(node);
-        nfa.start_node.node_to_groups[node];
+        nfa.start_node.edges[node];
         nfa.size = 1;
 
         for (char chr : " \n\t\n\r\f\v") {
-            nfa.start_node.edges[chr].insert({node});
+            nfa.start_node.edges_by_char[chr].insert({node});
         }
 
         return nfa;
@@ -269,13 +269,13 @@ namespace pyrex {
         node->epsilon_edge.emplace();
         nfa.all_nodes.push_back(node);
         nfa.lastpos.push_back(node);
-        nfa.start_node.node_to_groups[node];
+        nfa.start_node.edges[node];
         nfa.size = 1;
 
         for (char chr : "_0123456789"
                         "abcdefghijklmnopqrstuvwxyz"
                         "ABCDEFGHIJKLMNOPQRSTUVWXYZ") {
-            nfa.start_node.edges[chr].insert({node});
+            nfa.start_node.edges_by_char[chr].insert({node});
         }
 
         return nfa;
@@ -283,17 +283,20 @@ namespace pyrex {
 
     Regex::NFA &Regex::NFA::for_group(AST::Group const *group) {
         if (start_node.epsilon_edge) {
-            auto &tokens = (*start_node.epsilon_edge)[group];
-            tokens.push_back(GroupToken::ENTER);
-            tokens.push_back(GroupToken::LEAVE);
+            auto &group_info = (*start_node.epsilon_edge)[group];
+
+            if (group_info.tokens.empty()) {
+                group_info.tokens.push_back(GroupToken::ENTER);
+                group_info.tokens.push_back(GroupToken::LEAVE);
+            }
         }
 
-        for (auto &[node, groups] : start_node.node_to_groups) {
-            groups[group].push_back(GroupToken::ENTER);
+        for (auto &[node, group_to_tokens] : start_node.edges) {
+            group_to_tokens[group].tokens.push_front(GroupToken::ENTER);
         }
 
         for (auto node : lastpos) {
-            (*node->epsilon_edge)[group].push_back(GroupToken::LEAVE);
+            (*node->epsilon_edge)[group].tokens.push_back(GroupToken::LEAVE);
         }
 
         return *this;
@@ -308,58 +311,61 @@ namespace pyrex {
     }
 
     Regex::NFA &Regex::NFA::star() {
+        if (!start_node.epsilon_edge) {
+            start_node.epsilon_edge.emplace();
+        }
+
         for (auto lastpos_node : lastpos) {
-            for (auto const &[chr, firstpos_nodes] : start_node.edges) {
-                auto &lastpos_edges_for_chr = lastpos_node->edges[chr];
+            for (auto const &[chr, firstpos_nodes_for_chr] : start_node.edges_by_char) {
+                auto &lastpos_edges_for_chr = lastpos_node->edges_by_char[chr];
                 auto lastpos_edge_it = lastpos_edges_for_chr.cbegin();
 
-                for (auto firstpos_node : firstpos_nodes) {
-                    auto &firstpos_groups = start_node.node_to_groups[firstpos_node];
+                for (auto firstpos_node : firstpos_nodes_for_chr) {
+                    auto &lastpos_groups_info = lastpos_node->edges[firstpos_node];
+                    auto &start_groups_info = start_node.edges[firstpos_node];
 
                     while (lastpos_edge_it != lastpos_edges_for_chr.cend() &&
                            *lastpos_edge_it < firstpos_node) {
                         ++lastpos_edge_it;
                     }
 
-                    if (lastpos_edge_it != lastpos_edges_for_chr.cend() &&
-                        *lastpos_edge_it == firstpos_node) {
-                        auto &curr_tokens = lastpos_node->node_to_groups[firstpos_node];
+                    bool already_existing_edge = (
+                        lastpos_edge_it != lastpos_edges_for_chr.cend() &&
+                        *lastpos_edge_it == firstpos_node
+                    );
 
-                        for (auto &[group, tokens] : *lastpos_node->epsilon_edge) {
-                            auto &curr_group_tokens = curr_tokens[group];
+                    if (!already_existing_edge) {
+                        lastpos_edges_for_chr.emplace_hint(lastpos_edge_it, firstpos_node);
+                    }
 
-                            for (auto token : tokens) {
-                                if (token == GroupToken::LEAVE) {
-                                    curr_group_tokens.push_back(GroupToken::OPTIONAL_LEAVE);
-                                } else {
-                                    curr_group_tokens.push_back(token);
+                    auto update_groups_info = [&lastpos_groups_info, already_existing_edge](
+                        GroupToTokens &group_to_tokens
+                    ) {
+                        for (auto &[group, group_info] : group_to_tokens) {
+                            auto existing_group_info_it = lastpos_groups_info.find(group);
+                            bool already_existing_group =
+                                existing_group_info_it != lastpos_groups_info.cend();
+
+                            if (!already_existing_edge || !already_existing_group) {
+                                auto &other_group_info = lastpos_groups_info[group];
+                                other_group_info.tokens.insert(
+                                    other_group_info.tokens.cend(),
+                                    group_info.tokens.cbegin(),
+                                    group_info.tokens.cend()
+                                );
+
+                                if (already_existing_edge && !already_existing_group) {
+                                    other_group_info.optional_path = true;
                                 }
                             }
                         }
+                    };
 
-                        ++lastpos_edge_it;
-                    } else {
-                        lastpos_edges_for_chr.emplace_hint(lastpos_edge_it, firstpos_node);
-                        auto[new_tokens_it, _] = lastpos_node->node_to_groups
-                            .emplace(firstpos_node, *lastpos_node->epsilon_edge);
-
-                        for (auto &[group, tokens] : firstpos_groups) {
-                            auto &new_tokens = new_tokens_it->second[group];
-                            new_tokens.insert(new_tokens.cend(), tokens.cbegin(), tokens.cend());
-                        }
-                    }
-
-                    if (start_node.epsilon_edge) {
-                        for (auto &[group, tokens] : *start_node.epsilon_edge) {
-
-                        }
-                    }
+                    update_groups_info(*lastpos_node->epsilon_edge);
+                    update_groups_info(*start_node.epsilon_edge);
+                    update_groups_info(start_groups_info);
                 }
             }
-        }
-
-        if (!start_node.epsilon_edge) {
-            start_node.epsilon_edge.emplace();
         }
 
         return *this;
@@ -443,12 +449,12 @@ namespace pyrex {
         }
 
         auto connect_to_other = [&other](NFA::Node *node) {
-            for (auto const &[chr, firstpos_nodes] : other.start_node.edges) {
-                node->edges[chr].insert(firstpos_nodes.cbegin(), firstpos_nodes.cend());
+            for (auto const &[chr, firstpos_nodes] : other.start_node.edges_by_char) {
+                node->edges_by_char[chr].insert(firstpos_nodes.cbegin(), firstpos_nodes.cend());
             }
 
-            for (auto &[firstpos_node, other_groups] : other.start_node.node_to_groups) {
-                auto[groups_it, _] = node->node_to_groups
+            for (auto &[firstpos_node, other_groups] : other.start_node.edges) {
+                auto[groups_it, _] = node->edges
                     .emplace(firstpos_node, *node->epsilon_edge);
 
                 for (auto &[group, other_tokens] : other_groups) {
@@ -494,11 +500,11 @@ namespace pyrex {
             throw std::runtime_error("Maximum number of NFA nodes reached");
         }
 
-        for (auto &[chr, other_firstpos_nodes] : other.start_node.edges) {
-            start_node.edges[chr].merge(other_firstpos_nodes);
+        for (auto &[chr, other_firstpos_nodes] : other.start_node.edges_by_char) {
+            start_node.edges_by_char[chr].merge(other_firstpos_nodes);
         }
 
-        start_node.node_to_groups.merge(other.start_node.node_to_groups);
+        start_node.edges.merge(other.start_node.edges);
 
         if (other.start_node.epsilon_edge) {
             if (start_node.epsilon_edge) {

@@ -38,9 +38,9 @@ namespace pyrex {
             accepting = false;
 
             for (auto old_node : old_state) {
-                auto chr_edges_it = old_node->edges.find(chr);
+                auto chr_edges_it = old_node->edges_by_char.find(chr);
 
-                if (chr_edges_it != old_node->edges.cend()) {
+                if (chr_edges_it != old_node->edges_by_char.cend()) {
                     for (auto new_node : chr_edges_it->second) {
                         if (!already_on[new_node]) {
                             already_on[new_node] = true;
@@ -156,9 +156,9 @@ namespace pyrex {
             char chr = *text_it;
 
             for (auto &[old_node, old_pawn] : old_pawns) {
-                auto nbhs_for_chr_it = old_node->edges.find(chr);
+                auto nbhs_for_chr_it = old_node->edges_by_char.find(chr);
 
-                if (nbhs_for_chr_it == old_node->edges.cend()) {
+                if (nbhs_for_chr_it == old_node->edges_by_char.cend()) {
                     // pawn gets destroyed, because it cannot progress any further
                     old_pawn.entered.clear();
                     old_pawn.matches.clear();
@@ -167,7 +167,7 @@ namespace pyrex {
 
                 for (auto new_node : nbhs_for_chr_it->second) {
                     Pawn tmp_pawn(old_pawn);
-                    auto &groups = old_node->node_to_groups.find(new_node)->second;
+                    auto &groups = old_node->edges.find(new_node)->second;
                     // stuff below could possibly be extracted
                     auto tokens_for_group_it = groups.find(group);
 
