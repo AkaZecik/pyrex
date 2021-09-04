@@ -321,9 +321,6 @@ namespace pyrex {
                 auto lastpos_edge_it = lastpos_edges_for_chr.cbegin();
 
                 for (auto firstpos_node : firstpos_nodes_for_chr) {
-                    auto &lastpos_groups_info = lastpos_node->edges[firstpos_node];
-                    auto &start_groups_info = start_node.edges[firstpos_node];
-
                     while (lastpos_edge_it != lastpos_edges_for_chr.cend() &&
                            *lastpos_edge_it < firstpos_node) {
                         ++lastpos_edge_it;
@@ -337,6 +334,9 @@ namespace pyrex {
                     if (!already_existing_edge) {
                         lastpos_edges_for_chr.emplace_hint(lastpos_edge_it, firstpos_node);
                     }
+
+                    auto &lastpos_groups_info = lastpos_node->edges[firstpos_node];
+                    auto &start_groups_info = start_node.edges[firstpos_node];
 
                     auto update_groups_info = [&lastpos_groups_info, already_existing_edge](
                         GroupToTokens &group_to_tokens
@@ -365,6 +365,22 @@ namespace pyrex {
                     update_groups_info(*start_node.epsilon_edge);
                     update_groups_info(start_groups_info);
                 }
+            }
+        }
+
+        for (auto lastpos_node : lastpos) {
+            for (auto &[group, group_info] : *start_node.epsilon_edge) {
+                auto &tokens = (*lastpos_node->epsilon_edge)[group].tokens;
+                tokens.insert(tokens.cend(), group_info.tokens.cbegin(), group_info.tokens.cend());
+            }
+        }
+
+        for (auto &[firstpos_node, group_to_tokens] : start_node.edges) {
+            for (auto &[group, group_info] : *start_node.epsilon_edge) {
+                auto &tokens = group_to_tokens[group].tokens;
+                tokens.insert(
+                    tokens.cbegin(), group_info.tokens.cbegin(), group_info.tokens.cend()
+                );
             }
         }
 
@@ -457,16 +473,20 @@ namespace pyrex {
                 auto[groups_it, _] = node->edges
                     .emplace(firstpos_node, *node->epsilon_edge);
 
-                for (auto &[group, other_tokens] : other_groups) {
-                    auto &tokens = groups_it->second[group];
-                    tokens.insert(tokens.cend(), other_tokens.cbegin(), other_tokens.cend());
+                for (auto &[group, group_info] : other_groups) {
+                    auto &tokens = groups_it->second[group].tokens;
+                    tokens.insert(
+                        tokens.cend(), group_info.tokens.cbegin(), group_info.tokens.cend()
+                    );
                 }
             }
 
             if (other.start_node.epsilon_edge) {
-                for (auto &[group, other_tokens] : *other.start_node.epsilon_edge) {
-                    auto &tokens = (*node->epsilon_edge)[group];
-                    tokens.insert(tokens.cend(), other_tokens.cbegin(), other_tokens.cend());
+                for (auto &[group, group_info] : *other.start_node.epsilon_edge) {
+                    auto &tokens = (*node->epsilon_edge)[group].tokens;
+                    tokens.insert(
+                        tokens.cend(), group_info.tokens.cbegin(), group_info.tokens.cend()
+                    );
                 }
             } else {
                 node->epsilon_edge.reset();
