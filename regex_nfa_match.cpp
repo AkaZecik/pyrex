@@ -114,7 +114,7 @@ namespace pyrex {
                         auto tokens_for_group_it = node->epsilon_edge->find(group);
 
                         if (tokens_for_group_it != node->epsilon_edge->cend()) {
-                            for (auto token : tokens_for_group_it->second) {
+                            for (auto token : tokens_for_group_it->second.tokens) {
                                 switch (token) {
                                     case GroupToken::ENTER: {
                                         pawn.entered.insert(pos);
@@ -166,13 +166,23 @@ namespace pyrex {
                 }
 
                 for (auto new_node : nbhs_for_chr_it->second) {
+                    auto &new_pawn = new_pawns[new_node];
                     Pawn tmp_pawn(old_pawn);
-                    auto &groups = old_node->edges.find(new_node)->second;
+                    auto &groups_to_tokens = old_node->edges.find(new_node)->second;
                     // stuff below could possibly be extracted
-                    auto tokens_for_group_it = groups.find(group);
+                    auto group_info_it = groups_to_tokens.find(group);
 
-                    if (tokens_for_group_it != groups.cend()) {
-                        for (auto token : tokens_for_group_it->second) {
+                    if (group_info_it != groups_to_tokens.cend()) {
+                        if (group_info_it->second.optional_path) {
+                            new_pawn.entered.insert(
+                                old_pawn.entered.cbegin(), old_pawn.entered.cend()
+                            );
+                            new_pawn.matches.insert(
+                                old_pawn.matches.cbegin(), old_pawn.matches.cend()
+                            );
+                        }
+
+                        for (auto token : group_info_it->second.tokens) {
                             if (token == GroupToken::ENTER) {
                                 tmp_pawn.entered.emplace(pos);
                             } else {
@@ -188,7 +198,6 @@ namespace pyrex {
                     }
                     // stuff above could possibly be extracted
 
-                    auto &new_pawn = new_pawns[new_node];
                     new_pawn.entered.merge(tmp_pawn.entered);
                     new_pawn.matches.merge(tmp_pawn.matches);
                 }

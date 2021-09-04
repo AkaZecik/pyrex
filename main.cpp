@@ -73,7 +73,8 @@ void test_match() {
 void test_submatch() {
     std::vector<std::pair<std::string, std::vector<std::string>>> tests;
 
-    pyrex::Regex regex("((a)*)*");
+    pyrex::Regex regex("(a*)*");
+    regex.compile();
     std::vector<std::string> texts({
         // "",
         // "a",
@@ -122,7 +123,7 @@ void test_submatch() {
                 std::cout << start << " " << end << std::endl;
             }
         } else {
-            std::cout << "No matches!";
+            std::cout << "No matches!" << std::endl;
         }
     }
 }

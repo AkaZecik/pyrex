@@ -326,44 +326,49 @@ namespace pyrex {
                         ++lastpos_edge_it;
                     }
 
-                    bool already_existing_edge = (
+                    bool edge_already_exists = (
                         lastpos_edge_it != lastpos_edges_for_chr.cend() &&
                         *lastpos_edge_it == firstpos_node
                     );
 
-                    if (!already_existing_edge) {
+                    if (!edge_already_exists) {
                         lastpos_edges_for_chr.emplace_hint(lastpos_edge_it, firstpos_node);
                     }
 
                     auto &lastpos_groups_info = lastpos_node->edges[firstpos_node];
-                    auto &start_groups_info = start_node.edges[firstpos_node];
+                    std::unordered_set<AST::Group const *> already_existing_groups;
 
-                    auto update_groups_info = [&lastpos_groups_info, already_existing_edge](
-                        GroupToTokens &group_to_tokens
-                    ) {
-                        for (auto &[group, group_info] : group_to_tokens) {
-                            auto existing_group_info_it = lastpos_groups_info.find(group);
-                            bool already_existing_group =
-                                existing_group_info_it != lastpos_groups_info.cend();
+                    for (auto &[group, _] : lastpos_groups_info) {
+                        already_existing_groups.insert(group);
+                    }
 
-                            if (!already_existing_edge || !already_existing_group) {
-                                auto &other_group_info = lastpos_groups_info[group];
-                                other_group_info.tokens.insert(
-                                    other_group_info.tokens.cend(),
-                                    group_info.tokens.cbegin(),
-                                    group_info.tokens.cend()
-                                );
+                    auto update_groups_info =
+                        [&lastpos_groups_info, &already_existing_groups, edge_already_exists](
+                            GroupToTokens &group_to_tokens
+                        ) {
+                            for (auto &[group, group_info] : group_to_tokens) {
+                                bool group_already_exists =
+                                    already_existing_groups.find(group) !=
+                                    already_existing_groups.cend();
 
-                                if (already_existing_edge && !already_existing_group) {
-                                    other_group_info.optional_path = true;
+                                if (!edge_already_exists || !group_already_exists) {
+                                    auto &other_group_info = lastpos_groups_info[group];
+                                    other_group_info.tokens.insert(
+                                        other_group_info.tokens.cend(),
+                                        group_info.tokens.cbegin(),
+                                        group_info.tokens.cend()
+                                    );
+
+                                    if (edge_already_exists && !group_already_exists) {
+                                        other_group_info.optional_path = true;
+                                    }
                                 }
                             }
-                        }
-                    };
+                        };
 
                     update_groups_info(*lastpos_node->epsilon_edge);
                     update_groups_info(*start_node.epsilon_edge);
-                    update_groups_info(start_groups_info);
+                    update_groups_info(start_node.edges[firstpos_node]);
                 }
             }
         }
