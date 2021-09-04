@@ -6,6 +6,7 @@
 #include <list>
 #include <map>
 #include <unordered_map>
+#include <unordered_set>
 #include "ast.h"
 
 /* TODO:
@@ -33,7 +34,7 @@ namespace pyrex {
             inline static std::size_t const MAX_NUM_OF_NODES = 100000;
 
             enum class GroupToken {
-                ENTER, LEAVE,
+                ENTER, LEAVE, OPTIONAL_LEAVE,
             };
 
             typedef std::unordered_map<AST::Group const *, std::list<GroupToken>> GroupToTokens;
@@ -42,8 +43,9 @@ namespace pyrex {
 
             struct Node {
                 std::unordered_map<char, std::set<Node *>> edges;
-                std::unordered_map<Node *, GroupToTokens> node_to_groups;
+                std::unordered_map<Node const *, GroupToTokens> node_to_groups;
                 std::optional<GroupToTokens> epsilon_edge;
+                std::unordered_set<Node const *> empty_groups;
 
                 std::string chr_; // TODO: remove
                 int id; // TODO: remove

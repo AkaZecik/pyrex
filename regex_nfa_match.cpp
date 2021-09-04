@@ -173,18 +173,15 @@ namespace pyrex {
 
                     if (tokens_for_group_it != groups.cend()) {
                         for (auto token : tokens_for_group_it->second) {
-                            switch (token) {
-                                case GroupToken::ENTER: {
-                                    tmp_pawn.entered.emplace(pos);
-                                    break;
+                            if (token == GroupToken::ENTER) {
+                                tmp_pawn.entered.emplace(pos);
+                            } else {
+                                for (auto start : tmp_pawn.entered) {
+                                    tmp_pawn.matches.emplace(start, pos);
                                 }
-                                case GroupToken::LEAVE: {
-                                    for (auto start : tmp_pawn.entered) {
-                                        tmp_pawn.matches.emplace(start, pos);
-                                    }
 
+                                if (token == GroupToken::LEAVE) {
                                     tmp_pawn.entered.clear();
-                                    break;
                                 }
                             }
                         }

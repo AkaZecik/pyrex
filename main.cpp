@@ -81,6 +81,33 @@ void test_submatch() {
         "aaaaaaaaaa",
     });
 
+    /* ((((ab)?){2})*)*
+     * (((((ab)?)*){2})*)*
+     *
+     * (((?:ab)?)*)*
+     * ((ab)*)*
+     * ((?:ab|(\e))*)*
+     * ((?:(ab)*|(\e))*)*
+     */
+
+    /*
+     * po kazdej operacji, kazda krawedz do stanu firstpos, jezeli ma grupe,
+     * to ostatni token na tej grupie to ENTER
+     * jesli wierzcholek ma krawedz epsilonowa, to ostatni token na tej krawedzi to LEAVE
+     * jesli na krawedzi jest OPTIONAL_LEAVE, to jest zaraz po niej ENTER
+     * na kazdej krawedzi wewnetrznej (nie start->firstpos, nie lastpos->end) po kazdej
+     * krawedzi LEAVE jest krawedz ENTER,
+     * na kazdej krawedzi wewnetrzej jest maksymalnie jeden leave?
+     * jak popatrzymy sie na numery przy ENTER_X, ENTER_Y, LEAVE_Y, LEAVE_X,
+     * to te numery sa ciagiem liczb, gdzie roznica miedzy kolejnymi liczbami to 1, 0 lub -1
+     * jesli krawedz z lastpos do firstpos nie istnieje, to moze sie pojawic
+     * tylko po zrobieniu operacji star
+     *
+     * moje algo rozwiazuje szerszy problem: dane jest wyrazenie regularne, gdzie nawiasy
+     * sa oznaczane tagami/labelami. Tagi/labele moga sie powtarzac. Moj algorytm zwraca
+     * wszystkie podslowa, ktore moga byc rozpoznane przez grupy z tym tagiem, wszystko na raz.
+     */
+
     std::cout << regex.to_string() << std::endl;
 
     for (auto &text : texts) {

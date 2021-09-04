@@ -314,6 +314,8 @@ namespace pyrex {
                 auto lastpos_edge_it = lastpos_edges_for_chr.cbegin();
 
                 for (auto firstpos_node : firstpos_nodes) {
+                    auto &firstpos_groups = start_node.node_to_groups[firstpos_node];
+
                     while (lastpos_edge_it != lastpos_edges_for_chr.cend() &&
                            *lastpos_edge_it < firstpos_node) {
                         ++lastpos_edge_it;
@@ -321,16 +323,35 @@ namespace pyrex {
 
                     if (lastpos_edge_it != lastpos_edges_for_chr.cend() &&
                         *lastpos_edge_it == firstpos_node) {
+                        auto &curr_tokens = lastpos_node->node_to_groups[firstpos_node];
+
+                        for (auto &[group, tokens] : *lastpos_node->epsilon_edge) {
+                            auto &curr_group_tokens = curr_tokens[group];
+
+                            for (auto token : tokens) {
+                                if (token == GroupToken::LEAVE) {
+                                    curr_group_tokens.push_back(GroupToken::OPTIONAL_LEAVE);
+                                } else {
+                                    curr_group_tokens.push_back(token);
+                                }
+                            }
+                        }
+
                         ++lastpos_edge_it;
                     } else {
                         lastpos_edges_for_chr.emplace_hint(lastpos_edge_it, firstpos_node);
-                        auto &firstpos_groups = start_node.node_to_groups[firstpos_node];
                         auto[new_tokens_it, _] = lastpos_node->node_to_groups
                             .emplace(firstpos_node, *lastpos_node->epsilon_edge);
 
                         for (auto &[group, tokens] : firstpos_groups) {
                             auto &new_tokens = new_tokens_it->second[group];
                             new_tokens.insert(new_tokens.cend(), tokens.cbegin(), tokens.cend());
+                        }
+                    }
+
+                    if (start_node.epsilon_edge) {
+                        for (auto &[group, tokens] : *start_node.epsilon_edge) {
+
                         }
                     }
                 }
@@ -357,6 +378,7 @@ namespace pyrex {
     }
 
     Regex::NFA &Regex::NFA::min(int min) {
+        // TODO: check calculation of tokens if min == 0
         if (min == 0) {
             return star();
         }
@@ -380,6 +402,7 @@ namespace pyrex {
     }
 
     Regex::NFA &Regex::NFA::range(int min, int max) {
+        // TODO: check calculation of tokens if max == 0 or min == 0
         if (max == 0) {
             *this = for_empty();
             return *this;
